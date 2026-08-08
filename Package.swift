@@ -16,6 +16,38 @@
 
 import PackageDescription
 
+struct Generated {
+  public let path: String
+  public let module: String
+  public var traits: Set<Package.Dependency.Trait>
+
+  init(path: String, module: String, traits: [String] = []) {
+    self.path = path
+    self.module = module
+    self.traits = Set(traits.map { .init(name: $0) })
+  }
+}
+
+let generated: [Generated] = [
+  .init(path: "./generated/google-cloud-location", module: "GoogleCloudLocation"),
+  .init(path: "./generated/google-iam-v1", module: "GoogleIAMV1"),
+  .init(path: "./generated/google-cloud-secretmanager-v1", module: "GoogleCloudSecretManagerV1"),
+  .init(path: "./generated/google-cloud-security-publicca-v1", module: "GoogleCloudSecurityPublicCAV1"),
+  .init(path: "./generated/google-cloud-workflows-v1", module: "GoogleCloudWorkflowsV1"),
+  .init(path: "./generated/google-cloud-compute-v1", module: "GoogleCloudComputeV1", traits: ["Instances", "Images", "ZoneOperations"]),
+]
+
+let generatedDependencies: [Package.Dependency] = generated.map {
+  if $0.traits.isEmpty {
+    return .package(path: $0.path)
+  }
+  return .package(path: $0.path, traits: $0.traits)
+}
+
+let generatedModules: [Target.Dependency] = generated.map {
+  .product(name: $0.module, package: String($0.path.split(separator: "/").last!))
+}
+
 let package = Package(
   name: "GoogleCloudSwift",
   platforms: [
@@ -25,6 +57,8 @@ let package = Package(
     "IntegrationTests"
   ],
   dependencies: [
+    // Only used for development.
+    .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
     // Reference local packages via paths
     .package(path: "./packages/auth"),
     .package(
@@ -37,19 +71,8 @@ let package = Package(
     .package(path: "./packages/wkt"),
     .package(path: "./packages/storage"),
     .package(path: "./guide"),
-    .package(
-      path: "./generated/google-cloud-compute-v1",
-      traits: ["Instances", "Images", "ZoneOperations"],
-    ),
-    .package(path: "./generated/google-cloud-location"),
-    .package(path: "./generated/google-iam-v1"),
-    .package(path: "./generated/google-cloud-secretmanager-v1"),
-    .package(path: "./generated/google-cloud-security-publicca-v1"),
-    .package(path: "./generated/google-cloud-workflows-v1"),
     .package(url: "https://github.com/apple/swift-log", from: "1.12.0"),
-    // Only used for development.
-    .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
-  ],
+  ] + generatedDependencies,
   targets: [
     .testTarget(
       name: "IntegrationTests",
@@ -59,7 +82,7 @@ let package = Package(
     ),
     .testTarget(
       name: "AllModules",
-      dependencies: [.product(name: "UserGuide", package: "guide")],
+      dependencies: [.product(name: "UserGuide", package: "guide")] + generatedModules,
     ),
     .testTarget(
       name: "Discovery",
