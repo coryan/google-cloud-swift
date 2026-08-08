@@ -16,36 +16,43 @@
 
 import PackageDescription
 
+// The package file for the `google-cloud-swift` monorepo.
+//
+// This file is only used for development, each package in the `generated/*` and `packages/*`
+// subdirectories will have its own repository, this file will play no role in them.
+//
+// The file uses a helper function to create the full list of packages. The function returns a
+// different value in CI builds, so we can compile all the packages using SPM. In the development
+// environment this is too slow.
+
+// A generated package description.
+//
+// This is just enough information to populate the `Package` data structure. It needs both the
+// package path and its
 struct Generated {
-  public let path: String
+  public let name: String
   public let module: String
   public var traits: Set<Package.Dependency.Trait>
 
-  init(path: String, module: String, traits: [String] = []) {
-    self.path = path
+  init(name: String, module: String, traits: [String] = []) {
+    self.name = name
     self.module = module
     self.traits = Set(traits.map { .init(name: $0) })
   }
 }
 
-let generated: [Generated] = [
-  .init(path: "./generated/google-cloud-location", module: "GoogleCloudLocation"),
-  .init(path: "./generated/google-iam-v1", module: "GoogleIAMV1"),
-  .init(path: "./generated/google-cloud-secretmanager-v1", module: "GoogleCloudSecretManagerV1"),
-  .init(path: "./generated/google-cloud-security-publicca-v1", module: "GoogleCloudSecurityPublicCAV1"),
-  .init(path: "./generated/google-cloud-workflows-v1", module: "GoogleCloudWorkflowsV1"),
-  .init(path: "./generated/google-cloud-compute-v1", module: "GoogleCloudComputeV1", traits: ["Instances", "Images", "ZoneOperations"]),
-]
+let generated: [Generated] = generatedPackages()
 
 let generatedDependencies: [Package.Dependency] = generated.map {
-  if $0.traits.isEmpty {
-    return .package(path: $0.path)
+ let path = "./generated/\($0.name)"
+ if $0.traits.isEmpty {
+    return .package(path: path)
   }
-  return .package(path: $0.path, traits: $0.traits)
+  return .package(path: path, traits: $0.traits)
 }
 
 let generatedModules: [Target.Dependency] = generated.map {
-  .product(name: $0.module, package: String($0.path.split(separator: "/").last!))
+  .product(name: $0.module, package: $0.name)
 }
 
 let package = Package(
@@ -141,3 +148,14 @@ let package = Package(
     ),
   ]
 )
+
+func generatedPackages() -> [Generated] {
+return [
+  .init(name: "google-cloud-location", module: "GoogleCloudLocation"),
+  .init(name: "google-iam-v1", module: "GoogleIAMV1"),
+  .init(name: "google-cloud-secretmanager-v1", module: "GoogleCloudSecretManagerV1"),
+  .init(name: "google-cloud-security-publicca-v1", module: "GoogleCloudSecurityPublicCAV1"),
+  .init(name: "google-cloud-workflows-v1", module: "GoogleCloudWorkflowsV1"),
+  .init(name: "google-cloud-compute-v1", module: "GoogleCloudComputeV1", traits: ["Instances", "Images", "ZoneOperations"]),
+]
+}
