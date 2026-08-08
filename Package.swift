@@ -14,6 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import Foundation
 import PackageDescription
 
 // The package file for the `google-cloud-swift` monorepo.
@@ -150,12 +151,50 @@ let package = Package(
 )
 
 func generatedPackages() -> [Generated] {
-return [
-  .init(name: "google-cloud-location", module: "GoogleCloudLocation"),
-  .init(name: "google-iam-v1", module: "GoogleIAMV1"),
-  .init(name: "google-cloud-secretmanager-v1", module: "GoogleCloudSecretManagerV1"),
-  .init(name: "google-cloud-security-publicca-v1", module: "GoogleCloudSecurityPublicCAV1"),
-  .init(name: "google-cloud-workflows-v1", module: "GoogleCloudWorkflowsV1"),
-  .init(name: "google-cloud-compute-v1", module: "GoogleCloudComputeV1", traits: ["Instances", "Images", "ZoneOperations"]),
-]
+  let fullBuild = ProcessInfo.processInfo.environment["GOOGLE_CLOUD_SWIFT_FULL_BUILD"] == "true"
+  if fullBuild {
+    return generatedPackagesFull()
+  }
+  return generatedPackagesStatic()
+}
+
+func generatedPackagesStatic() -> [Generated] {
+  return [
+    .init(name: "google-cloud-location", module: "GoogleCloudLocation"),
+    .init(name: "google-iam-v1", module: "GoogleIAMV1"),
+    .init(name: "google-cloud-secretmanager-v1", module: "GoogleCloudSecretManagerV1"),
+    .init(name: "google-cloud-security-publicca-v1", module: "GoogleCloudSecurityPublicCAV1"),
+    .init(name: "google-cloud-workflows-v1", module: "GoogleCloudWorkflowsV1"),
+    .init(name: "google-cloud-compute-v1", module: "GoogleCloudComputeV1", traits: ["Instances", "Images", "ZoneOperations"]),
+  ]
+}
+
+func generatedPackagesFull() -> [Generated] {
+  var generated: [Generated] = []
+  let fileManager = FileManager.default
+  let found = try? fileManager.contentsOfDirectory(atPath: "./generated")
+  let prefix = "  name: \""
+  let suffix = "\","
+  for name in (found ?? []) {
+    let package = URL(fileURLWithPath: "generated").appending(path: name).appending(path: "Package.swift")
+    do {
+      let contents = try String(contentsOf: package, encoding: .utf8)
+      let matching = contents.split(separator: "\n").first(where: { $0.starts(with: prefix) && $0.hasSuffix(suffix) }).map({ r in
+        var value = String(r)
+        value.removeFirst(prefix.count)
+        value.removeLast(suffix.count)
+        return value
+      })
+      print("name=\(name) pkg=\(matching ?? "--- a ---")")
+      if let pkg = matching {
+        generated.append(.init(name: name, module: pkg))
+      }
+    } catch {
+      // Ignore I/O errors, including missing files, in the development environment this is common,
+      // as working in multiple branches may create empty directories.
+      continue
+    }
+  }
+
+  return generated // generatedPackagesStatic()
 }

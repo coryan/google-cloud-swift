@@ -53,6 +53,19 @@ if [[ "${GCB_TRIGGER_NAME:-}" != gcb-pm-* ]]; then
         echo "--- Discovered new directories in this PR: ${new[@]}"
     fi
 fi
+echo DEBUG DEBUG
+echo "--- Building ${#packages[@]} packages"
+if env GOOGLE_CLOUD_SWIFT_FULL_BUILD=true swift build "${flags[@]}" --target AllModules >".modules.log" 2>&1; then
+    echo "✓ AllModules built successfully"
+else
+    cat "${dir}/.modules.log"
+    echo; echo "✗ AllModules failed to build"
+    errors=$((errors + 1))
+    continue
+fi
+
+packages=()
+echo DEBUG DEBUG
 echo "--- Building ${#packages[@]} packages"
 for dir in "${packages[@]}"; do
     [[ -f "${dir}/Package.swift" ]] || continue
