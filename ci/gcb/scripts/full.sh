@@ -55,10 +55,9 @@ if [[ "${GCB_TRIGGER_NAME:-}" != gcb-pm-* ]]; then
 fi
 echo DEBUG DEBUG
 echo "--- Building ${#packages[@]} packages"
-if env GOOGLE_CLOUD_SWIFT_FULL_BUILD=true swift build "${flags[@]}" --target AllModules >".modules.log" 2>&1; then
+if env GOOGLE_CLOUD_SWIFT_FULL_BUILD=true swift build "${flags[@]}" --target AllModules ; then
     echo "✓ AllModules built successfully"
 else
-    cat "${dir}/.modules.log"
     echo; echo "✗ AllModules failed to build"
     errors=$((errors + 1))
     continue
