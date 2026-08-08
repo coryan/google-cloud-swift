@@ -45,8 +45,8 @@ struct Generated {
 let generated: [Generated] = generatedPackages()
 
 let generatedDependencies: [Package.Dependency] = generated.map {
- let path = "./generated/\($0.name)"
- if $0.traits.isEmpty {
+  let path = "./generated/\($0.name)"
+  if $0.traits.isEmpty {
     return .package(path: path)
   }
   return .package(path: path, traits: $0.traits)
@@ -165,7 +165,9 @@ func generatedPackagesStatic() -> [Generated] {
     .init(name: "google-cloud-secretmanager-v1", module: "GoogleCloudSecretManagerV1"),
     .init(name: "google-cloud-security-publicca-v1", module: "GoogleCloudSecurityPublicCAV1"),
     .init(name: "google-cloud-workflows-v1", module: "GoogleCloudWorkflowsV1"),
-    .init(name: "google-cloud-compute-v1", module: "GoogleCloudComputeV1", traits: ["Instances", "Images", "ZoneOperations"]),
+    .init(
+      name: "google-cloud-compute-v1", module: "GoogleCloudComputeV1",
+      traits: ["Instances", "Images", "ZoneOperations"]),
   ]
 }
 
@@ -176,10 +178,13 @@ func generatedPackagesFull() -> [Generated] {
   let prefix = "  name: \""
   let suffix = "\","
   for name in (found ?? []) {
-    let package = URL(fileURLWithPath: "generated").appending(path: name).appending(path: "Package.swift")
+    let package = URL(fileURLWithPath: "generated").appending(path: name).appending(
+      path: "Package.swift")
     do {
       let contents = try String(contentsOf: package, encoding: .utf8)
-      let matching = contents.split(separator: "\n").first(where: { $0.starts(with: prefix) && $0.hasSuffix(suffix) }).map({ r in
+      let matching = contents.split(separator: "\n").first(where: {
+        $0.starts(with: prefix) && $0.hasSuffix(suffix)
+      }).map({ r in
         var value = String(r)
         value.removeFirst(prefix.count)
         value.removeLast(suffix.count)
@@ -196,5 +201,5 @@ func generatedPackagesFull() -> [Generated] {
     }
   }
 
-  return generated // generatedPackagesStatic()
+  return generated  // generatedPackagesStatic()
 }
