@@ -77,8 +77,8 @@ extension CredentialsError: CustomDebugStringConvertible {
         return
           """
           The credentials were configured to use `.adc()`, the default. The ADC (Application Default
-          Credentials) discovery algorith has fallen back on the metadata server, which indicates it
-          could not find any other credentials.
+          Credentials) discovery algorithm has fallen back on the metadata server, which indicates
+          it could not find any other credentials.
           The GCE_METADATA_HOST environment variable is not set, therefore the library uses the
           default metadata server endpoint (\(MDSAccessTokenProvider.defaultEndpoint)).
           The most common reason for this problem is that the application is **not** running in a Google
@@ -99,8 +99,8 @@ extension CredentialsError: CustomDebugStringConvertible {
         return
           """
           The credentials were configured to use `.adc()`, the default. The ADC (Application Default
-          Credentials) discovery algorith has fallen back on the metadata server, which indicates it
-          could not find any other credentials.
+          Credentials) discovery algorithm has fallen back on the metadata server, which indicates
+          it could not find any other credentials.
           The GCE_METADATA_HOST environment variable is set to '\(env ?? "")', overriding the default.
           Verify the metadata service is running at that endpoint.
           Underlying error: \(error)
