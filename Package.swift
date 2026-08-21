@@ -122,6 +122,17 @@ let package = Package(
           name: "GoogleCloudSecurityPublicCAV1", package: "google-cloud-security-publicca-v1"),
       ],
     ),
+    .executableTarget(
+      name: "Endurance",
+      dependencies: [
+        .product(name: "GoogleCloudSecretManagerV1", package: "google-cloud-secretmanager-v1"),
+        .product(name: "GoogleCloudGax", package: "gax"),
+        .product(name: "GoogleCloudWkt", package: "wkt"),
+        .product(name: "GoogleCloudTestHelpers", package: "test-helpers"),
+      ],
+      path: "Tests/Endurance",
+      exclude: ["README.md", "endurance-test.service"]
+    ),
   ]
 )
 
