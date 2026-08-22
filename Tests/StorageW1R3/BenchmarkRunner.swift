@@ -67,7 +67,6 @@ public struct BenchmarkRunner: Sendable {
 
     // Print CSV header to stdout
     print(Sample.header)
-    fflush(stdout)
 
     // Start background periodic counter reporting to stderr
     let monitorTask = Task {
@@ -287,15 +286,30 @@ public struct BenchmarkRunner: Sendable {
 
   private static func emitSample(_ sample: Sample) {
     print(sample.toRow())
-    fflush(stdout)
   }
 
   private static func generateRandomBuffer(size: Int) -> Data {
     guard size > 0 else { return Data() }
+    var generator = SystemRandomNumberGenerator()
     var data = Data(count: size)
     data.withUnsafeMutableBytes { ptr in
       guard let baseAddress = ptr.baseAddress else { return }
-      arc4random_buf(baseAddress, ptr.count)
+      var remaining = ptr.count
+      var current = baseAddress.assumingMemoryBound(to: UInt64.self)
+      while remaining >= 8 {
+        current.pointee = generator.next()
+        current = current.advanced(by: 1)
+        remaining -= 8
+      }
+      if remaining > 0 {
+        var bytePtr = UnsafeMutableRawPointer(current).assumingMemoryBound(to: UInt8.self)
+        var val = generator.next()
+        for _ in 0..<remaining {
+          bytePtr.pointee = UInt8(truncatingIfNeeded: val)
+          val >>= 8
+          bytePtr = bytePtr.advanced(by: 1)
+        }
+      }
     }
     return data
   }
