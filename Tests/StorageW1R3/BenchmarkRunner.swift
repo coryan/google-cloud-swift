@@ -290,28 +290,8 @@ public struct BenchmarkRunner: Sendable {
 
   private static func generateRandomBuffer(size: Int) -> Data {
     guard size > 0 else { return Data() }
-    var generator = SystemRandomNumberGenerator()
-    var data = Data(count: size)
-    data.withUnsafeMutableBytes { ptr in
-      guard let baseAddress = ptr.baseAddress else { return }
-      var remaining = ptr.count
-      var current = baseAddress.assumingMemoryBound(to: UInt64.self)
-      while remaining >= 8 {
-        current.pointee = generator.next()
-        current = current.advanced(by: 1)
-        remaining -= 8
-      }
-      if remaining > 0 {
-        var bytePtr = UnsafeMutableRawPointer(current).assumingMemoryBound(to: UInt8.self)
-        var val = generator.next()
-        for _ in 0..<remaining {
-          bytePtr.pointee = UInt8(truncatingIfNeeded: val)
-          val >>= 8
-          bytePtr = bytePtr.advanced(by: 1)
-        }
-      }
-    }
-    return data
+    let bytes = (0..<size).map { _ in UInt8.random(in: .min ... .max) }
+    return Data(bytes)
   }
 
   private static func randomObjectName() -> String {
