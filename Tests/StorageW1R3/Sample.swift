@@ -14,34 +14,6 @@
 
 import Foundation
 
-/// The type of storage operation performed during a benchmark step.
-public enum Operation: Sendable {
-  case resumable
-  case singleShot
-  case read(Int)
-  case delete
-
-  public var name: String {
-    switch self {
-    case .resumable: return "RESUMABLE"
-    case .singleShot: return "SINGLE_SHOT"
-    case .read(let index): return "READ[\(index)]"
-    case .delete: return "DELETE"
-    }
-  }
-}
-
-/// The outcome status of an individual benchmark operation sample.
-public enum ExperimentResult: String, Sendable {
-  case ok = "OK"
-  case err = "ERR"
-  case int = "INT"
-
-  public var name: String {
-    rawValue
-  }
-}
-
 /// A recorded measurement sample representing the result and timing of a single operation.
 public struct Sample: Sendable {
   public static let header =
@@ -60,90 +32,5 @@ public struct Sample: Sendable {
 
   public func toRow() -> String {
     "\(task),\(iteration),\(iterationStartMicros),\(operation.name),\(size),\(transferSize),\(elapsedMicros),\(object),\(result.name),\(details)"
-  }
-}
-
-/// Helper to measure operation duration and build `Sample` instances with relative timestamps.
-public struct SampleBuilder: Sendable {
-  public let task: Int
-  public let relativeStartMicros: Int64
-  public let iteration: Int
-  public let clock: ContinuousClock
-  public let startInstant: ContinuousClock.Instant
-  public let op: Operation
-  public let targetSize: Int
-  public let object: String
-
-  public init(
-    task: Int,
-    taskStartInstant: ContinuousClock.Instant,
-    iteration: Int,
-    op: Operation,
-    targetSize: Int,
-    object: String
-  ) {
-    self.task = task
-    self.clock = ContinuousClock()
-    let now = clock.now
-    let relDuration = taskStartInstant.duration(to: now)
-    self.relativeStartMicros =
-      relDuration.components.seconds * 1_000_000 + relDuration.components.attoseconds
-      / 1_000_000_000_000
-    self.iteration = iteration
-    self.startInstant = now
-    self.op = op
-    self.targetSize = targetSize
-    self.object = object
-  }
-
-  private var elapsedMicroseconds: Int64 {
-    let duration = startInstant.duration(to: clock.now)
-    return duration.components.seconds * 1_000_000 + duration.components.attoseconds
-      / 1_000_000_000_000
-  }
-
-  public func success(transferSize: Int? = nil) -> Sample {
-    Sample(
-      task: task,
-      iteration: iteration,
-      iterationStartMicros: relativeStartMicros,
-      operation: op,
-      size: targetSize,
-      transferSize: transferSize ?? targetSize,
-      elapsedMicros: elapsedMicroseconds,
-      object: object,
-      result: .ok,
-      details: ""
-    )
-  }
-
-  public func error(details: String = "") -> Sample {
-    Sample(
-      task: task,
-      iteration: iteration,
-      iterationStartMicros: relativeStartMicros,
-      operation: op,
-      size: targetSize,
-      transferSize: 0,
-      elapsedMicros: elapsedMicroseconds,
-      object: object,
-      result: .err,
-      details: details.replacingOccurrences(of: ",", with: ";")
-    )
-  }
-
-  public func interrupted(transferSize: Int, details: String = "") -> Sample {
-    Sample(
-      task: task,
-      iteration: iteration,
-      iterationStartMicros: relativeStartMicros,
-      operation: op,
-      size: targetSize,
-      transferSize: transferSize,
-      elapsedMicros: elapsedMicroseconds,
-      object: object,
-      result: .int,
-      details: details.replacingOccurrences(of: ",", with: ";")
-    )
   }
 }
