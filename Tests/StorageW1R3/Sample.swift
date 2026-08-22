@@ -1,0 +1,145 @@
+// Copyright 2026 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+import Foundation
+
+public enum Operation: Sendable {
+  case resumable
+  case singleShot
+  case read(Int)
+  case delete
+
+  public var name: String {
+    switch self {
+    case .resumable: return "RESUMABLE"
+    case .singleShot: return "SINGLE_SHOT"
+    case .read(let index): return "READ[\(index)]"
+    case .delete: return "DELETE"
+    }
+  }
+}
+
+public enum ExperimentResult: String, Sendable {
+  case ok = "OK"
+  case err = "ERR"
+  case int = "INT"
+
+  public var name: String {
+    rawValue
+  }
+}
+
+public struct Sample: Sendable {
+  public static let header =
+    "Task,Iteration,IterationStart,Operation,Size,TransferSize,ElapsedMicroseconds,Object,Result,Details"
+
+  public let task: Int
+  public let iteration: Int
+  public let iterationStartMicros: Int64
+  public let operation: Operation
+  public let size: Int
+  public let transferSize: Int
+  public let elapsedMicros: Int64
+  public let object: String
+  public let result: ExperimentResult
+  public let details: String
+
+  public func toRow() -> String {
+    "\(task),\(iteration),\(iterationStartMicros),\(operation.name),\(size),\(transferSize),\(elapsedMicros),\(object),\(result.name),\(details)"
+  }
+}
+
+public struct SampleBuilder: Sendable {
+  public let task: Int
+  public let relativeStartMicros: Int64
+  public let iteration: Int
+  public let clock: ContinuousClock
+  public let startInstant: ContinuousClock.Instant
+  public let op: Operation
+  public let targetSize: Int
+  public let object: String
+
+  public init(
+    task: Int,
+    taskStartInstant: ContinuousClock.Instant,
+    iteration: Int,
+    op: Operation,
+    targetSize: Int,
+    object: String
+  ) {
+    self.task = task
+    self.clock = ContinuousClock()
+    let now = clock.now
+    let relDuration = taskStartInstant.duration(to: now)
+    self.relativeStartMicros =
+      relDuration.components.seconds * 1_000_000 + relDuration.components.attoseconds
+      / 1_000_000_000_000
+    self.iteration = iteration
+    self.startInstant = now
+    self.op = op
+    self.targetSize = targetSize
+    self.object = object
+  }
+
+  private var elapsedMicroseconds: Int64 {
+    let duration = startInstant.duration(to: clock.now)
+    return duration.components.seconds * 1_000_000 + duration.components.attoseconds
+      / 1_000_000_000_000
+  }
+
+  public func success(transferSize: Int? = nil) -> Sample {
+    Sample(
+      task: task,
+      iteration: iteration,
+      iterationStartMicros: relativeStartMicros,
+      operation: op,
+      size: targetSize,
+      transferSize: transferSize ?? targetSize,
+      elapsedMicros: elapsedMicroseconds,
+      object: object,
+      result: .ok,
+      details: ""
+    )
+  }
+
+  public func error(details: String = "") -> Sample {
+    Sample(
+      task: task,
+      iteration: iteration,
+      iterationStartMicros: relativeStartMicros,
+      operation: op,
+      size: targetSize,
+      transferSize: 0,
+      elapsedMicros: elapsedMicroseconds,
+      object: object,
+      result: .err,
+      details: details.replacingOccurrences(of: ",", with: ";")
+    )
+  }
+
+  public func interrupted(transferSize: Int, details: String = "") -> Sample {
+    Sample(
+      task: task,
+      iteration: iteration,
+      iterationStartMicros: relativeStartMicros,
+      operation: op,
+      size: targetSize,
+      transferSize: transferSize,
+      elapsedMicros: elapsedMicroseconds,
+      object: object,
+      result: .int,
+      details: details.replacingOccurrences(of: ",", with: ";")
+    )
+  }
+}
