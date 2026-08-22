@@ -290,7 +290,17 @@ public struct BenchmarkRunner: Sendable {
 
   private static func generateRandomBuffer(size: Int) -> Data {
     guard size > 0 else { return Data() }
-    let bytes = (0..<size).map { _ in UInt8.random(in: .min ... .max) }
+    var bytes = [UInt8](repeating: 0, count: size)
+    var offset = 0
+    while offset < size {
+      var val = UInt64.random(in: .min ... .max)
+      let count = min(8, size - offset)
+      for i in 0..<count {
+        bytes[offset + i] = UInt8(truncatingIfNeeded: val)
+        val >>= 8
+      }
+      offset += count
+    }
     return Data(bytes)
   }
 
