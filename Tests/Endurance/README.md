@@ -58,10 +58,14 @@ done
 On a GCE instance, install the Swift development tools (e.g. via swiftly or official Swift packages), git, and build tools:
 
 ```shell
-sudo apt update && sudo apt install -y git curl binutils libcurl4-openssl-dev libssl-dev
-curl -s https://swiftlang.github.io/swiftly/swiftly-install.sh | bash
-source ~/.local/share/swiftly/env.sh
+sudo apt update && sudo apt install -y git curl binutils libcurl4-openssl-dev libssl-dev gpg build-essential
+curl -O https://download.swift.org/swiftly/linux/swiftly-$(uname -m).tar.gz && \
+tar zxf swiftly-$(uname -m).tar.gz && \
+./swiftly init --quiet-shell-followup && \
+. "${SWIFTLY_HOME_DIR:-$HOME/.local/share/swiftly}/env.sh" && \
+hash -r
 swiftly install latest
+sudo apt-get -y install libicu-dev libedit-dev libsqlite3-dev libncurses-dev libpython3-dev libxml2-dev pkg-config uuid-dev libstdc++-12-dev
 ```
 
 Clone the code and build/run the test:
@@ -87,15 +91,15 @@ Create the systemd user service unit:
 
 ```shell
 mkdir -p ~/.config/systemd/user
-sed "s/@PROJECT@/$PROJECT_ID/" Tests/Endurance/endurance-test.service >~/.config/systemd/user/endurance-test.service
+sudo sed "s/@PROJECT@/$PROJECT_ID/" Tests/Endurance/endurance-test.service >/etc/systemd/system/swift-endurance.service
 ```
 
 Start the program as a background service:
 
 ```shell
-systemctl --user daemon-reload
-systemctl --user enable --now endurance-test.service
-systemctl --user status endurance-test.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now endurance-test.service
+sudo systemctl status endurance-test.service
 ```
 
 ## Future Work
@@ -105,3 +109,7 @@ request latency to Cloud Monitoring.
 
 If we wanted to deploy and run this continuously, it would be nice to use GKE
 and Cloud Build to automatically deploy new versions.
+
+It may be easier to deploy this by building a docker image (there is a Swift
+plugin to do this locally), and then deploy the image to an instance
+configured with the Container-Optimized OS image.
