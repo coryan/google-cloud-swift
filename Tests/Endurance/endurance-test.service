@@ -18,7 +18,7 @@ Description=Google Cloud client libraries for Swift Endurance Test
 [Service]
 Type=simple
 StandardOutput=journal
-Environment="PROJECT_ID=@PROJECT@"
+Environment="GOOGLE_CLOUD_PROJECT=@PROJECT@"
 ExecStart=/usr/local/bin/endurance-test
 
 [Install]

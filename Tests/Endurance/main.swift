@@ -35,7 +35,7 @@ enum EnduranceError: Error, CustomStringConvertible {
   var description: String {
     switch self {
     case .missingProjectId:
-      return "PROJECT_ID or GOOGLE_CLOUD_PROJECT environment variable is not set"
+      return "GOOGLE_CLOUD_PROJECT environment variable is not set"
     case .noEnduranceSecretsFound(let projectId):
       return "no secrets with the `endurance-test` label found in \(projectId)"
     }
