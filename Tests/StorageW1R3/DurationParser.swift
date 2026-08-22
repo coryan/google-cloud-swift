@@ -15,55 +15,7 @@
 import ArgumentParser
 import Foundation
 
-enum SizeParser {
-  /// Parses size strings such as "128KiB", "1MiB", "10MB", "1024", "0" into bytes.
-  static func parse(_ input: String) throws -> Int {
-    let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !trimmed.isEmpty else {
-      throw ValidationError("Size cannot be empty")
-    }
-
-    if let direct = Int(trimmed) {
-      guard direct >= 0 else {
-        throw ValidationError("Size cannot be negative: \(input)")
-      }
-      return direct
-    }
-
-    let units: [(suffix: String, multiplier: Int)] = [
-      ("tib", 1024 * 1024 * 1024 * 1024),
-      ("tb", 1000 * 1000 * 1000 * 1000),
-      ("gib", 1024 * 1024 * 1024),
-      ("gb", 1000 * 1000 * 1000),
-      ("g", 1024 * 1024 * 1024),
-      ("mib", 1024 * 1024),
-      ("mb", 1000 * 1000),
-      ("m", 1024 * 1024),
-      ("kib", 1024),
-      ("kb", 1000),
-      ("k", 1024),
-      ("b", 1),
-    ]
-
-    let lower = trimmed.lowercased()
-    for unit in units {
-      if lower.hasSuffix(unit.suffix) {
-        let numericPart = String(trimmed.dropLast(unit.suffix.count))
-          .trimmingCharacters(in: .whitespaces)
-        if let value = Double(numericPart) {
-          guard value >= 0 else {
-            throw ValidationError("Size cannot be negative: \(input)")
-          }
-          return Int(value * Double(unit.multiplier))
-        }
-      }
-    }
-
-    throw ValidationError(
-      "Invalid size format: '\(input)'. Expected values like '128KiB', '1MiB', '10MB', etc.")
-  }
-}
-
+/// Helper to parse human-readable duration strings (e.g. "500ms", "30s", "5m", "1h") into `Duration`.
 enum DurationParser {
   /// Parses duration strings such as "500ms", "30s", "5m", "1h" into `Duration`.
   static func parse(_ input: String) throws -> Duration {
