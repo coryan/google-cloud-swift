@@ -14,6 +14,7 @@
 
 import Foundation
 
+/// The type of storage operation performed during a benchmark step.
 public enum Operation: Sendable {
   case resumable
   case singleShot
@@ -30,6 +31,7 @@ public enum Operation: Sendable {
   }
 }
 
+/// The outcome status of an individual benchmark operation sample.
 public enum ExperimentResult: String, Sendable {
   case ok = "OK"
   case err = "ERR"
@@ -40,6 +42,7 @@ public enum ExperimentResult: String, Sendable {
   }
 }
 
+/// A recorded measurement sample representing the result and timing of a single operation.
 public struct Sample: Sendable {
   public static let header =
     "Task,Iteration,IterationStart,Operation,Size,TransferSize,ElapsedMicroseconds,Object,Result,Details"
@@ -60,6 +63,7 @@ public struct Sample: Sendable {
   }
 }
 
+/// Helper to measure operation duration and build `Sample` instances with relative timestamps.
 public struct SampleBuilder: Sendable {
   public let task: Int
   public let relativeStartMicros: Int64

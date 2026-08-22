@@ -17,6 +17,7 @@ import GoogleCloudAuth
 import GoogleCloudGax
 import GoogleCloudStorage
 
+/// Orchestrates the execution of the W1R3 benchmark across concurrent worker tasks.
 public struct BenchmarkRunner: Sendable {
   public let bucketName: String
   public let minObjectSize: Int

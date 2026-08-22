@@ -18,7 +18,7 @@ import Foundation
 ///
 /// An `actor` offers more than good enough performance in this case. We could have used
 /// low-level atomics, but (a) the benchmark is heavily network I/O-bound, and (b) counter
-/// increments occur only upon operation/batch completion. In these circumstances `actor` 
+/// increments occur only upon operation/batch completion. In these circumstances `actor`
 /// dispatch overhead should be negligible.
 public actor BenchmarkCounters {
   public private(set) var sampleCount: UInt64 = 0
