@@ -264,6 +264,9 @@ extension StorageClient {
         statusCode: statusCode,
         message: String(data: startData, encoding: .utf8) ?? "")
     }
+    // We need to drain the data in the response to release the underlying resources. We can ignore
+    // any errors because the the information we wanted is already captured.
+    await startResponse.drain()
     return location
   }
 
@@ -290,6 +293,9 @@ extension StorageClient {
       return (.done(object), nil)
     } else if statusCode == 308 {
       let queryStatus = try parseResumableUploadQueryStatus(from: queryResponse.headers)
+      // We need to drain the data in the response to release the underlying resources. We can ignore
+      // any errors because the the information we wanted is already captured.
+      await queryResponse.drain()
       return (.inprogress(UInt64(queryStatus.nextOffset)), queryStatus.crc32cSeed)
     } else if queryResponse.isError() {
       throw await queryResponse.decodeError()
@@ -362,6 +368,9 @@ extension StorageClient {
       if let runningHashHeader = uploadResponse.headers.first(name: "x-goog-running-hash") {
         crc32cSeed = parseCRC32CFromRunningHash(runningHashHeader)
       }
+      // We need to drain the data in the response to release the underlying resources. We can ignore
+      // any errors because the the information we wanted is already captured.
+      await uploadResponse.drain()
       return (.inprogress(UInt64(nextOffset)), crc32cSeed)
     } else if uploadResponse.isError() {
       throw await uploadResponse.decodeError()
