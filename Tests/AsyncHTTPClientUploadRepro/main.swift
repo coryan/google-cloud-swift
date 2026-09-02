@@ -44,6 +44,28 @@ actor ReproCounters {
   }
 }
 
+struct ChunkSequence: AsyncSequence, Sendable {
+  typealias Element = NIOCore.ByteBuffer
+
+  let buffer: NIOCore.ByteBuffer
+  let chunkSize: Int
+
+  struct AsyncIterator: AsyncIteratorProtocol {
+    var buffer: NIOCore.ByteBuffer
+    let chunkSize: Int
+
+    mutating func next() async throws -> NIOCore.ByteBuffer? {
+      if buffer.readableBytes == 0 { return nil }
+      let count = Swift.min(chunkSize, buffer.readableBytes)
+      return buffer.readSlice(length: count)
+    }
+  }
+
+  func makeAsyncIterator() -> AsyncIterator {
+    AsyncIterator(buffer: buffer, chunkSize: chunkSize)
+  }
+}
+
 @main
 struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
   @Option(name: .customLong("bucket-name"), help: "Target GCS bucket name.")
@@ -55,11 +77,14 @@ struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
   @Option(name: .customLong("iterations"), help: "Iterations per worker task.")
   var iterations: Int = 100_000
 
-  @Option(name: .customLong("object-size"), help: "Payload size in bytes (buffered).")
+  @Option(name: .customLong("object-size"), help: "Payload size in bytes.")
   var objectSize: Int = 32 * 1024
 
   @Option(name: .customLong("client-count"), help: "Number of AsyncHTTPClient instances.")
   var clientCount: Int = 1
+
+  @Flag(name: .customLong("stream-body"), help: "Stream body via HTTPClientRequest.Body.stream.")
+  var streamBody: Bool = false
 
   func run() async throws {
     let credentials = try Credentials()
@@ -108,7 +133,10 @@ struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
       monitorTask.cancel()
     }
 
-    logToStderr("Starting repro with \(taskCount) tasks, \(clientCount) clients, \(objectSize) bytes payload...")
+    let streamBody = self.streamBody
+    logToStderr(
+      "Starting repro with \(taskCount) tasks, \(clientCount) clients, \(objectSize) bytes payload, streaming: \(streamBody)..."
+    )
 
     try await withThrowingTaskGroup(of: Void.self) { group in
       for taskIndex in 0..<taskCount {
@@ -119,6 +147,7 @@ struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
             client: client,
             credentials: credentials,
             buffer: buffer,
+            streamBody: streamBody,
             counters: counters
           )
         }
@@ -138,6 +167,7 @@ struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
     client: HTTPClient,
     credentials: Credentials,
     buffer: NIOCore.ByteBuffer,
+    streamBody: Bool,
     counters: ReproCounters
   ) async {
     await counters.taskStarted()
@@ -162,7 +192,12 @@ struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
           request.headers.add(name: name, value: value)
         }
         request.headers.add(name: "Content-Type", value: "application/octet-stream")
-        request.body = .bytes(buffer)
+        if streamBody {
+          let stream = ChunkSequence(buffer: buffer, chunkSize: 16 * 1024)
+          request.body = .stream(stream, length: .known(Int64(buffer.readableBytes)))
+        } else {
+          request.body = .bytes(buffer)
+        }
 
         let response = try await client.execute(request, timeout: .seconds(30))
         for try await _ in response.body {}
