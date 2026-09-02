@@ -170,9 +170,11 @@ struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
         if (200..<300).contains(response.status.code) {
           await counters.recordSuccess()
         } else {
+          logToStderr("Upload failed with HTTP status: \(response.status.code)")
           await counters.recordFailure()
         }
       } catch {
+        logToStderr("Upload request threw error: \(error)")
         await counters.recordFailure()
       }
     }
