@@ -56,6 +56,7 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-log", from: "1.12.0"),
     .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
     .package(url: "https://github.com/apple/swift-nio", from: "2.101.0"),
+    .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.36.0"),
     // Only used for development.
     .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
   ] + generatedDependencies,
@@ -150,6 +151,16 @@ let package = Package(
       ],
       path: "Tests/StorageW1R3",
       exclude: ["README.md"]
+    ),
+    .executableTarget(
+      name: "AsyncHTTPClientUploadRepro",
+      dependencies: [
+        .product(name: "AsyncHTTPClient", package: "async-http-client"),
+        .product(name: "ArgumentParser", package: "swift-argument-parser"),
+        .product(name: "GoogleCloudAuth", package: "swift-google-auth"),
+        .product(name: "NIOCore", package: "swift-nio"),
+      ],
+      path: "Tests/AsyncHTTPClientUploadRepro"
     ),
     .target(
       name: "StorageSamples",
