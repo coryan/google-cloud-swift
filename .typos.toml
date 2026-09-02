@@ -19,6 +19,7 @@ extend-exclude = [
   "testdata/**",
   # Generated libraries often contain typos coming from upstream protos.
   "generated/**",
+  "packages/**/generated/**",
   # librarian.yaml contains SHAs that confuse `typos-cli`,
   "librarian.yaml",
 ]
@@ -32,4 +33,6 @@ extend-ignore-re = [
   "-Xswiftc -Wwarning",
   # NAM4 looks like NAME, but it is intentional.
   "NAM4",
+  # Some french to show (in tests) how localized messages might work.
+  "\"Ressource introuvable\"",
 ]

@@ -57,11 +57,16 @@ let package = Package(
         "GoogleCloudGax",
         .product(name: "GoogleCloudAuth", package: "swift-google-auth"),
         .product(name: "GoogleCloudWKT", package: "swift-google-wkt"),
+        .product(name: "GoogleCloudWKTConvert", package: "swift-google-wkt"),
+        .product(name: "GoogleRpc", package: "swift-google-rpc"),
         .product(name: "GRPCCore", package: "grpc-swift-2"),
         .product(name: "GRPCNIOTransportHTTP2Posix", package: "grpc-swift-nio-transport"),
         .product(name: "GRPCProtobuf", package: "grpc-swift-protobuf"),
         .product(name: "NIOCore", package: "swift-nio"),
         .product(name: "SwiftProtobuf", package: "swift-protobuf"),
+      ],
+      swiftSettings: [
+        .enableUpcomingFeature("InternalImportsByDefault")
       ]
     ),
     .testTarget(
@@ -72,6 +77,11 @@ let package = Package(
         .product(name: "DequeModule", package: "swift-collections"),
         .product(name: "GoogleRpc", package: "swift-google-rpc"),
         .product(name: "GoogleCloudWKT", package: "swift-google-wkt"),
+        .product(name: "GoogleCloudWKTConvert", package: "swift-google-wkt"),
+        .product(name: "GRPCCore", package: "grpc-swift-2"),
+        .product(name: "GRPCNIOTransportHTTP2Posix", package: "grpc-swift-nio-transport"),
+        .product(name: "GRPCProtobuf", package: "grpc-swift-protobuf"),
+        .product(name: "SwiftProtobuf", package: "swift-protobuf"),
       ],
       path: "Tests",
     ),

@@ -683,6 +683,7 @@ libraries:
     copyright_year: "2026"
     output: packages/swift-google-gax/Sources/GoogleCloudGax/generated
     swift:
+      library_name_override: GoogleCloudGax
       modules:
         - output: packages/swift-google-gax/Sources/GoogleCloudGax/generated
           api_path: ""
