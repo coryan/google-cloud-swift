@@ -91,14 +91,6 @@ struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
     let clients: [HTTPClient] = (0..<clientCount).map { _ in
       HTTPClient(eventLoopGroupProvider: .singleton)
     }
-    defer {
-      Task { [clients] in
-        for client in clients {
-          try? await client.shutdown()
-        }
-      }
-    }
-
     var tempBuffer = ByteBufferAllocator().buffer(capacity: objectSize)
     tempBuffer.writeRepeatingByte(0x42, count: objectSize)
     let buffer = tempBuffer
@@ -154,6 +146,12 @@ struct AsyncHTTPClientUploadRepro: AsyncParsableCommand, Sendable {
       }
       try await group.waitForAll()
     }
+
+    for client in clients {
+      try? await client.shutdown()
+    }
+    // Allow any pending EventLoop deallocations to settle
+    try? await Task.sleep(for: .milliseconds(200))
 
     let (finalSuccesses, finalFailures, _) = await counters.snapshot()
     let totalElapsed = startTime.duration(to: ContinuousClock.now)
