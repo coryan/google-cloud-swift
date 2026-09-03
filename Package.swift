@@ -56,6 +56,8 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-log", from: "1.12.0"),
     .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
     .package(url: "https://github.com/apple/swift-nio", from: "2.101.0"),
+    .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.37.0"),
+    .package(url: "https://github.com/apple/swift-nio-http2.git", from: "1.45.0"),
     .package(url: "https://github.com/swift-server/async-http-client.git", from: "1.36.0"),
     // Only used for development.
     .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
@@ -161,6 +163,29 @@ let package = Package(
         .product(name: "NIOCore", package: "swift-nio"),
       ],
       path: "Tests/AsyncHTTPClientUploadRepro"
+    ),
+    .executableTarget(
+      name: "AsyncHTTPClientHTTP2Repro",
+      dependencies: [
+        .product(name: "AsyncHTTPClient", package: "async-http-client"),
+        .product(name: "ArgumentParser", package: "swift-argument-parser"),
+        .product(name: "GoogleCloudAuth", package: "swift-google-auth"),
+        .product(name: "NIOCore", package: "swift-nio"),
+      ],
+      path: "Tests/AsyncHTTPClientHTTP2Repro"
+    ),
+    .executableTarget(
+      name: "HTTP2ServerCrashRepro",
+      dependencies: [
+        .product(name: "AsyncHTTPClient", package: "async-http-client"),
+        .product(name: "NIOCore", package: "swift-nio"),
+        .product(name: "NIOPosix", package: "swift-nio"),
+        .product(name: "NIOTLS", package: "swift-nio"),
+        .product(name: "NIOHTTP1", package: "swift-nio"),
+        .product(name: "NIOHTTP2", package: "swift-nio-http2"),
+        .product(name: "NIOSSL", package: "swift-nio-ssl"),
+      ],
+      path: "Tests/HTTP2ServerCrashRepro"
     ),
     .executableTarget(
       name: "StorageClientUploadRepro",
