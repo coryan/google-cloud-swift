@@ -186,7 +186,8 @@ let package = Package(
         .product(name: "NIOHTTP2", package: "swift-nio-http2"),
         .product(name: "NIOSSL", package: "swift-nio-ssl"),
       ],
-      path: "Tests/HTTP2ServerCrashRepro"
+      path: "Tests/HTTP2ServerCrashRepro",
+      exclude: ["README.md"]
     ),
     .executableTarget(
       name: "StorageClientUploadRepro",
