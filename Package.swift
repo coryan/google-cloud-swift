@@ -172,7 +172,8 @@ let package = Package(
         .product(name: "GoogleCloudAuth", package: "swift-google-auth"),
         .product(name: "NIOCore", package: "swift-nio"),
       ],
-      path: "Tests/AsyncHTTPClientHTTP2Repro"
+      path: "Tests/AsyncHTTPClientHTTP2Repro",
+      exclude: ["README.md"]
     ),
     .executableTarget(
       name: "HTTP2ServerCrashRepro",
