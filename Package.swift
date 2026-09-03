@@ -162,6 +162,26 @@ let package = Package(
       ],
       path: "Tests/AsyncHTTPClientUploadRepro"
     ),
+    .executableTarget(
+      name: "StorageClientUploadRepro",
+      dependencies: [
+        .product(name: "ArgumentParser", package: "swift-argument-parser"),
+        .product(name: "GoogleCloudStorage", package: "swift-google-cloud-storage"),
+        .product(name: "GoogleCloudAuth", package: "swift-google-auth"),
+        .product(name: "NIOCore", package: "swift-nio"),
+      ],
+      path: "Tests/StorageClientUploadRepro"
+    ),
+    .executableTarget(
+      name: "StorageClientResumableUploadRepro",
+      dependencies: [
+        .product(name: "ArgumentParser", package: "swift-argument-parser"),
+        .product(name: "GoogleCloudStorage", package: "swift-google-cloud-storage"),
+        .product(name: "GoogleCloudAuth", package: "swift-google-auth"),
+        .product(name: "NIOCore", package: "swift-nio"),
+      ],
+      path: "Tests/StorageClientResumableUploadRepro"
+    ),
     .target(
       name: "StorageSamples",
       dependencies: [

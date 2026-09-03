@@ -81,9 +81,32 @@ public actor BenchmarkCounters {
     ]
   }
 
+  public private(set) var maxRssAnonKb: UInt64 = 0
+
+  public static func readRssAnonKb() -> UInt64 {
+    guard let content = try? String(contentsOfFile: "/proc/self/status", encoding: .utf8) else {
+      return 0
+    }
+    for line in content.split(separator: "\n") {
+      if line.hasPrefix("RssAnon:") {
+        let parts = line.split(separator: " ", omittingEmptySubsequences: true)
+        if parts.count >= 2, let kb = UInt64(parts[1]) {
+          return kb
+        }
+      }
+    }
+    return 0
+  }
+
   public func formattedDescription() -> String {
-    let pairs = snapshot().map { "\"\($0.key)\": \($0.value)" }.joined(separator: ", ")
-    return "Counters = [\(pairs)]"
+    let rssKb = Self.readRssAnonKb()
+    if rssKb > maxRssAnonKb {
+      maxRssAnonKb = rssKb
+    }
+    var pairs = snapshot().map { "\"\($0.key)\": \($0.value)" }
+    pairs.append("\"RSS_ANON\": \"\(rssKb) kB\"")
+    pairs.append("\"MAX_RSS_ANON\": \"\(maxRssAnonKb) kB\"")
+    return "Counters = [\(pairs.joined(separator: ", "))]"
   }
 
   public func errorDetails(error: (any Error)?) -> String {
