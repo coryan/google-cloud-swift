@@ -23,6 +23,29 @@ import NIOSSL
 import NIOTLS
 
 // MARK: - Test TLS Certificates
+//
+// SAFETY NOTICE:
+// --------------
+// The certificate and private key below are self-signed test credentials:
+// - They are test credentials for loopback (`127.0.0.1`) testing and not usable
+//   for production or authentication against any service.
+// - The client disables certificate verification (`certificateVerification = .none`)
+//   to accept this local test certificate.
+//
+// WHY TLS / HTTPS IS REQUIRED:
+// ----------------------------
+// `AsyncHTTPClient` does not support cleartext HTTP/2 (`h2c` / prior knowledge).
+// In `AsyncHTTPClient`, non-TLS requests use HTTP/1.1 (see `HTTPConnectionPool+Factory.swift:256`):
+//
+//     bootstrap.connect(target: self.key.connectionTarget).map { .http1_1($0) }
+//
+// Over `http://`, the client sends HTTP/1.1 text requests. The mock HTTP/2 server
+// expects the HTTP/2 connection preface (`PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n`) and rejects
+// HTTP/1.1 with "invalid constant string". `HTTP2ClientRequestHandler` is only added to
+// the pipeline when ALPN negotiates "h2" during TLS.
+//
+// Therefore, an in-process TLS server with ALPN negotiation is required to
+// reproduce issues in `AsyncHTTPClient`'s HTTP/2 client handler.
 
 enum TestCertificates {
   static let certificatePEM = """
