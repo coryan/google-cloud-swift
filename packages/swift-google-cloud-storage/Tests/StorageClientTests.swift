@@ -36,4 +36,18 @@ import Testing
   @Test func clientIsSendable() {
     Self.assertSendable(StorageClient.self)
   }
+
+  @Test func shutdownIsIdempotent() async throws {
+    let options = StorageClientOptions().with {
+      $0.client = .init().with {
+        $0.endpoint = "http://localhost:1234"
+        $0.credentials = try! Credentials(configuration: .anonymous)
+      }
+    }
+
+    let client = try StorageClient(options)
+    try await client.shutdown()
+    // Second call is safe and idempotent
+    try await client.shutdown()
+  }
 }

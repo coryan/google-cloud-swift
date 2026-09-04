@@ -96,6 +96,14 @@ struct StorageW1R3: AsyncParsableCommand, Sendable {
 
     let finalSummary = await counters.formattedDescription()
     logToStderr("DONE. Final \(finalSummary)")
+
+    await withTaskGroup(of: Void.self) { group in
+      for client in storageClients {
+        group.addTask {
+          try? await client.shutdown()
+        }
+      }
+    }
   }
 
   @Option(

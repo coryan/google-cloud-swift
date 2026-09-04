@@ -50,4 +50,13 @@ public final class StorageClient: StorageProtocol, Sendable {
     self.options = options
     self.inner = client
   }
+
+  /// Shuts down the client and releases any underlying HTTP resources and connection pools.
+  ///
+  /// Calling `shutdown()` explicitly guarantees deterministic cleanup before process termination
+  /// or between test/benchmark runs. Calling this method is optional; resources are also cleaned
+  /// up automatically via `deinit`. Multiple calls to `shutdown()` are safe and idempotent.
+  public func shutdown() async throws {
+    try await self.inner.shutdown()
+  }
 }

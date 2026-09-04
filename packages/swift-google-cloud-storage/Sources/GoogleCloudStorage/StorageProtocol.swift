@@ -53,4 +53,7 @@ public protocol StorageProtocol {
     object: String,
     options: ReadObjectOptions
   ) -> ReadObjectTask
+
+  /// Shuts down the client and releases any underlying resources.
+  func shutdown() async throws
 }
