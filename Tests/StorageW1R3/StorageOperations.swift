@@ -72,6 +72,7 @@ enum StorageOperations {
       $0.generation = if object.generation > 0 { UInt64(object.generation) } else { nil }
       $0.checksums = crc32cEnabled ? .default : .none
     }
+    options.checksums = crc32cEnabled ? .default : .none
 
     let readTask = client.readObject(from: object.bucket, object: object.name, options: options)
     var transferSize = 0
