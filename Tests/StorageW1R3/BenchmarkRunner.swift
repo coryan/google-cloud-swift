@@ -292,7 +292,15 @@ extension StorageW1R3 {
   func makeControlClients(_ credentials: Credentials) throws -> [StorageControlClient] {
     var clients: [StorageControlClient] = []
     for _ in 0..<self.controlClientCount {
-      clients.append(try StorageControlClient(.init().with { $0.credentials = credentials }))
+      clients.append(
+        try StorageControlClient(
+          .init().with {
+            $0.credentials = credentials
+            $0.retryPolicy = GoogleCloudGax.BaseRetryPolicy()
+              .retryOnServerErrors()
+              .withAttemptLimit(5)
+              .withTimeLimit(.seconds(30))
+          }))
     }
     return clients
   }
