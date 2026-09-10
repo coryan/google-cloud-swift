@@ -238,6 +238,31 @@ public struct ReadObjectOptions: Sendable {
   /// Overrides the backoff policy for this download.
   public var backoffPolicy: (any BackoffPolicy)? = nil
 
+  /// Overrides the quota project for this download operation.
+  ///
+  /// By default, Google Cloud Storage attributes quota and billing usage to the project associated
+  /// with the credentials, the project configured on `StorageClientOptions.client.quotaProject`,
+  /// or the project owning the bucket. Setting `quotaProject` instructs the service to charge
+  /// quota and billing for this download to the specified project ID or project number instead.
+  ///
+  /// This is commonly used when:
+  /// - Downloading from a [Requester Pays] bucket where the caller's project must be billed for
+  ///   data access and egress.
+  /// - Authenticating with user credentials (such as those created by
+  ///   `gcloud auth application-default login`), which are not inherently tied to a project.
+  /// - Multiplexing downloads across multiple consumer projects using a single `StorageClient`.
+  ///
+  /// The authenticated principal must have the `serviceusage.services.use` IAM permission
+  /// (granted by the [Service Usage Consumer] role, `roles/serviceusage.serviceUsageConsumer`) on
+  /// the specified project.
+  ///
+  /// When set, the `x-goog-user-project` header is sent with this value, taking precedence over
+  /// any client-level or credential-level quota project.
+  ///
+  /// [Requester Pays]: https://cloud.google.com/storage/docs/requester-pays
+  /// [Service Usage Consumer]: https://cloud.google.com/service-usage/docs/access-control
+  public var quotaProject: String? = nil
+
   /// Default configuration options.
   public static var `default`: ReadObjectOptions { ReadObjectOptions() }
 
@@ -249,6 +274,20 @@ public struct ReadObjectOptions: Sendable {
     var copy = self
     config(&copy)
     return copy
+  }
+}
+
+extension ReadObjectOptions {
+  internal func withDefaults(_ defaults: Self) -> Self {
+    var copy = self
+    copy.resumePolicy = self.resumePolicy ?? defaults.resumePolicy
+    copy.backoffPolicy = self.backoffPolicy ?? defaults.backoffPolicy
+    copy.quotaProject = self.quotaProject ?? defaults.quotaProject
+    return copy
+  }
+
+  internal var requestOptions: RequestOptions {
+    RequestOptions().with { $0.quotaProject = self.quotaProject }
   }
 }
 

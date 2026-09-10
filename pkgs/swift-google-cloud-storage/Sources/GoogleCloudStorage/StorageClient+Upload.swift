@@ -45,19 +45,14 @@ extension StorageClient {
     as objectName: String,
     options: UploadOptions = .default
   ) async throws -> Object {
-    let clientOptions = self.options.client
-    let effectiveBackoffPolicy =
-      options.backoffPolicy ?? self.options.upload.backoffPolicy ?? clientOptions.backoffPolicy
-    let effectiveResumePolicy =
-      options.resumePolicy ?? self.options.upload.resumePolicy
-      ?? StorageResumePolicy<UploadDetails>().stopOnConsecutiveErrors()
+    let effectiveOptions = options.withDefaults(self.options.upload)
     let resumeLoop = _ResumeLoop(
-      resumePolicy: effectiveResumePolicy,
-      backoffPolicy: effectiveBackoffPolicy
+      resumePolicy: effectiveOptions.resumePolicy
+        ?? StorageResumePolicy<UploadDetails>().stopOnConsecutiveErrors(),
+      backoffPolicy: effectiveOptions.backoffPolicy ?? self.options.client.backoffPolicy
     )
     let effectiveThreshold =
-      options.resumableUploadThreshold ?? self.options.upload.resumableUploadThreshold
-      ?? UploadOptions.defaultResumableUploadThreshold
+      effectiveOptions.resumableUploadThreshold ?? UploadOptions.defaultResumableUploadThreshold
     let httpClient = self.inner
 
     var source = source
@@ -71,8 +66,8 @@ extension StorageClient {
         source: &source,
         bucket: bucket,
         objectName: objectName,
-        metadata: options.metadata,
-        options: options,
+        metadata: effectiveOptions.metadata,
+        options: effectiveOptions,
         totalSize: totalSize,
         resumeLoop: resumeLoop
       )
@@ -82,12 +77,12 @@ extension StorageClient {
         source: &source,
         bucket: bucket,
         objectName: objectName,
-        metadata: options.metadata,
+        metadata: effectiveOptions.metadata,
         uploadId: nil,
         initialStatus: .inprogress(0),
-        chunkSize: options.chunkSize,
+        chunkSize: effectiveOptions.chunkSize,
         totalSize: source.totalSize,
-        options: options,
+        options: effectiveOptions,
         resumeLoop: resumeLoop
       )
     }
@@ -107,22 +102,14 @@ extension StorageClient {
     as objectName: String,
     options: UploadOptions = .default
   ) async throws -> Object {
-    let clientOptions = self.options.client
-    let effectiveBackoffPolicy =
-      options.backoffPolicy ?? self.options.upload.backoffPolicy ?? clientOptions.backoffPolicy
-    let effectiveResumePolicy: any ResumePolicy<UploadDetails>
-    if let explicitResume = options.resumePolicy ?? self.options.upload.resumePolicy {
-      effectiveResumePolicy = explicitResume
-    } else {
-      effectiveResumePolicy = StorageResumePolicy().stopOnConsecutiveErrors()
-    }
+    let effectiveOptions = options.withDefaults(self.options.upload)
     let resumeLoop = _ResumeLoop(
-      resumePolicy: effectiveResumePolicy,
-      backoffPolicy: effectiveBackoffPolicy
+      resumePolicy: effectiveOptions.resumePolicy
+        ?? StorageResumePolicy<UploadDetails>().stopOnConsecutiveErrors(),
+      backoffPolicy: effectiveOptions.backoffPolicy ?? self.options.client.backoffPolicy
     )
     let effectiveThreshold =
-      options.resumableUploadThreshold ?? self.options.upload.resumableUploadThreshold
-      ?? UploadOptions.defaultResumableUploadThreshold
+      effectiveOptions.resumableUploadThreshold ?? UploadOptions.defaultResumableUploadThreshold
     let httpClient = self.inner
 
     var source = source
@@ -136,8 +123,8 @@ extension StorageClient {
         source: &source,
         bucket: bucket,
         objectName: objectName,
-        metadata: options.metadata,
-        options: options,
+        metadata: effectiveOptions.metadata,
+        options: effectiveOptions,
         totalSize: totalSize,
         resumeLoop: resumeLoop
       )
@@ -147,12 +134,12 @@ extension StorageClient {
         source: &source,
         bucket: bucket,
         objectName: objectName,
-        metadata: options.metadata,
+        metadata: effectiveOptions.metadata,
         uploadId: nil,
         initialStatus: .inprogress(0),
-        chunkSize: options.chunkSize,
+        chunkSize: effectiveOptions.chunkSize,
         totalSize: source.totalSize,
-        options: options,
+        options: effectiveOptions,
         resumeLoop: resumeLoop
       )
     }
@@ -203,7 +190,8 @@ extension StorageClient {
       try await stream.rewind()
 
       var request = try await httpClient.newRequest(
-        path: "/upload/storage/v1/b/\(bucketId)/o", query: queryItems)
+        path: "/upload/storage/v1/b/\(bucketId)/o", query: queryItems,
+        options: options.requestOptions)
       request.setMethod(.POST)
       if let checksum = checksum {
         request.setHeader(name: "x-goog-hash", value: checksum)
@@ -661,18 +649,11 @@ extension StorageClient {
     uploadId: String,
     options: UploadOptions = .default
   ) async throws -> Object {
-    let clientOptions = self.options.client
-    let effectiveBackoffPolicy =
-      options.backoffPolicy ?? self.options.upload.backoffPolicy ?? clientOptions.backoffPolicy
-    let effectiveResumePolicy: any ResumePolicy<UploadDetails>
-    if let explicitResume = options.resumePolicy ?? self.options.upload.resumePolicy {
-      effectiveResumePolicy = explicitResume
-    } else {
-      effectiveResumePolicy = StorageResumePolicy().stopOnConsecutiveErrors()
-    }
+    let effectiveOptions = options.withDefaults(self.options.upload)
     let resumeLoop = _ResumeLoop(
-      resumePolicy: effectiveResumePolicy,
-      backoffPolicy: effectiveBackoffPolicy
+      resumePolicy: effectiveOptions.resumePolicy
+        ?? StorageResumePolicy<UploadDetails>().stopOnConsecutiveErrors(),
+      backoffPolicy: effectiveOptions.backoffPolicy ?? self.options.client.backoffPolicy
     )
     let httpClient = self.inner
     var source = source
@@ -686,9 +667,9 @@ extension StorageClient {
       metadata: nil,
       uploadId: uploadId,
       initialStatus: .unknown,
-      chunkSize: options.chunkSize,
+      chunkSize: effectiveOptions.chunkSize,
       totalSize: totalSize,
-      options: options,
+      options: effectiveOptions,
       resumeLoop: resumeLoop
     )
   }
@@ -749,7 +730,8 @@ extension StorageClient {
 
     let bucketId = BucketName.extractBucketName(bucket)
     var request = try await httpClient.newRequest(
-      path: "/upload/storage/v1/b/\(bucketId)/o", query: queryItems)
+      path: "/upload/storage/v1/b/\(bucketId)/o", query: queryItems, options: options.requestOptions
+    )
     request.setMethod(.POST)
     request.setHeader(name: "Content-Type", value: "application/json; charset=UTF-8")
 
@@ -767,7 +749,8 @@ extension StorageClient {
     uploadId: String,
     options: UploadOptions? = nil
   ) async throws -> GoogleCloudGax._HTTPClientRequest {
-    var request = try await httpClient.newRequest(uri: uploadId)
+    var request = try await httpClient.newRequest(
+      uri: uploadId, options: options?.requestOptions ?? .init())
     request.setMethod(.PUT)
     request.setHeader(name: "Content-Type", value: "application/octet-stream")
     request.setHeader(name: "Content-Range", value: "bytes */*")
@@ -787,7 +770,7 @@ extension StorageClient {
     options: UploadOptions,
     checksum: String? = nil
   ) async throws -> GoogleCloudGax._HTTPClientRequest {
-    var request = try await httpClient.newRequest(uri: uploadId)
+    var request = try await httpClient.newRequest(uri: uploadId, options: options.requestOptions)
     request.setMethod(.PUT)
     request.setHeader(name: "Content-Type", value: "application/octet-stream")
 

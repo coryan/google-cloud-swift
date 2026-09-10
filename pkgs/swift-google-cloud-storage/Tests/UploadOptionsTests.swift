@@ -33,6 +33,7 @@ import Testing
     #expect(options.predefinedAcl == nil)
     #expect(options.resumePolicy == nil)
     #expect(options.backoffPolicy == nil)
+    #expect(options.quotaProject == nil)
   }
 
   @Test func uploadOptionsWithBuilder() throws {
@@ -54,6 +55,7 @@ import Testing
       $0.metadata = metadata
       $0.predefinedAcl = .publicRead
       $0.resumePolicy = NeverResume<UploadDetails>()
+      $0.quotaProject = "upload-quota-project"
     }
 
     #expect(options.resumableUploadThreshold == 4 * 1024 * 1024)
@@ -65,5 +67,51 @@ import Testing
     #expect(options.metadata?.contentType == "application/json")
     #expect(options.predefinedAcl == .publicRead)
     #expect(options.resumePolicy != nil)
+    #expect(options.quotaProject == "upload-quota-project")
+  }
+
+  @Test(
+    arguments: [
+      (
+        options: UploadOptions(),
+        expectedThreshold: 16 * 1024 * 1024,
+        expectedIsAlwaysResume: false,
+        expectedQuotaProject: "default-upload-quota"
+      ),
+      (
+        options: UploadOptions().with {
+          $0.resumableUploadThreshold = 32 * 1024 * 1024
+          $0.resumePolicy = AlwaysResume<UploadDetails>()
+          $0.quotaProject = "override-upload-quota"
+        },
+        expectedThreshold: 32 * 1024 * 1024,
+        expectedIsAlwaysResume: true,
+        expectedQuotaProject: "override-upload-quota"
+      ),
+    ]
+  )
+  func uploadOptionsWithDefaults(
+    options: UploadOptions,
+    expectedThreshold: Int,
+    expectedIsAlwaysResume: Bool,
+    expectedQuotaProject: String
+  ) {
+    let defaults = UploadOptions().with {
+      $0.resumableUploadThreshold = 16 * 1024 * 1024
+      $0.resumePolicy = NeverResume<UploadDetails>()
+      $0.backoffPolicy = ExponentialBackoff()
+      $0.quotaProject = "default-upload-quota"
+    }
+
+    let resolved = options.withDefaults(defaults)
+    #expect(resolved.resumableUploadThreshold == expectedThreshold)
+    if expectedIsAlwaysResume {
+      #expect(resolved.resumePolicy is AlwaysResume<UploadDetails>)
+    } else {
+      #expect(resolved.resumePolicy is NeverResume<UploadDetails>)
+    }
+    #expect(resolved.backoffPolicy is ExponentialBackoff)
+    #expect(resolved.quotaProject == expectedQuotaProject)
+    #expect(resolved.requestOptions.quotaProject == expectedQuotaProject)
   }
 }

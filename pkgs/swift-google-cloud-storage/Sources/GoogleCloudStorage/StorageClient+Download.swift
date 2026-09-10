@@ -29,21 +29,17 @@ extension StorageClient {
     object: String,
     options: ReadObjectOptions = .init()
   ) -> ReadObjectTask {
-    let clientOptions = self.options.client
-    let effectiveBackoffPolicy =
-      options.backoffPolicy ?? self.options.download.backoffPolicy ?? clientOptions.backoffPolicy
-    let effectiveResumePolicy =
-      options.resumePolicy ?? self.options.download.resumePolicy
-      ?? StorageResumePolicy<DownloadDetails>().stopOnConsecutiveErrors()
+    let effectiveOptions = options.withDefaults(self.options.download)
     let resumeLoop = _ResumeLoop(
-      resumePolicy: effectiveResumePolicy,
-      backoffPolicy: effectiveBackoffPolicy
+      resumePolicy: effectiveOptions.resumePolicy
+        ?? StorageResumePolicy<DownloadDetails>().stopOnConsecutiveErrors(),
+      backoffPolicy: effectiveOptions.backoffPolicy ?? self.options.client.backoffPolicy
     )
 
     let coordinator = ReadObjectCoordinator(
       bucket: bucket,
       object: object,
-      options: options,
+      options: effectiveOptions,
       httpClient: inner,
       resumeLoop: resumeLoop
     )
@@ -173,7 +169,9 @@ extension GoogleCloudGax._HTTPClient {
     let encodedBucket =
       bucketId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? bucketId
     var request = try await self.newRequest(
-      percentEncodedPath: "/storage/v1/b/\(encodedBucket)/o/\(encodedObject)", query: queryItems)
+      percentEncodedPath: "/storage/v1/b/\(encodedBucket)/o/\(encodedObject)",
+      query: queryItems,
+      options: options.requestOptions)
     request.setMethod(.GET)
 
     if let rangeHeader = options.range.headerValue {

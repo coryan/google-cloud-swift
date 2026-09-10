@@ -41,7 +41,7 @@ public final class StorageClient: StorageProtocol, Sendable {
     self.options = options
     self.inner = try GoogleCloudGax._HTTPClient(
       mock, endpoint: endpoint, credentials: options.client.credentials,
-      defaultEndpoint: Self.defaultEndpoint)
+      quotaProject: options.client.quotaProject, defaultEndpoint: Self.defaultEndpoint)
   }
 
   @_spi(GoogleCloudInternal) public init(
