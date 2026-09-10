@@ -620,6 +620,43 @@ import NIOHTTP1
     #expect(response.status == .ok)
   }
 
+  @Test(arguments: [
+    // Credentials quota project used when neither client nor request options set quotaProject
+    (clientQuota: nil as String?, requestQuota: nil as String?, expected: "cred-project"),
+    // ClientOptions.quotaProject overrides credential header without duplication
+    (clientQuota: "client-project", requestQuota: nil, expected: "client-project"),
+    // RequestOptions.quotaProject overrides both ClientOptions.quotaProject and credential header
+    (clientQuota: "client-project", requestQuota: "request-project", expected: "request-project"),
+  ])
+  func quotaProjectPrecedence(
+    clientQuota: String?,
+    requestQuota: String?,
+    expected: String
+  ) async throws {
+    let credentials = MockCredentials([
+      { [("Authorization", "Bearer token"), ("x-goog-user-project", "cred-project")] }
+    ])
+    let mock = MockHTTPClient { (_, _) in
+      HTTPClientResponse(
+        version: .http1_1,
+        status: .ok,
+        body: .bytes(.init(string: "{}"))
+      )
+    }
+
+    let client = try _HTTPClient(
+      mock,
+      endpoint: "http://localhost:8080",
+      credentials: credentials,
+      quotaProject: clientQuota
+    )
+    var options = RequestOptions()
+    options.quotaProject = requestQuota
+
+    let request = try await client.newRequest(path: "/test", query: [], options: options)
+    #expect(request.headers[_HeaderNames.userProject] == [expected])
+  }
+
   /// A test response type.
   struct ResponseType: Codable, Equatable, Sendable {
     public let name: String

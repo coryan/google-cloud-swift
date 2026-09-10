@@ -279,4 +279,91 @@ import Testing
       Issue.record("Expected RequestError, got \(error)")
     }
   }
+
+  @Test(arguments: [
+    // Uses ClientOptions.quotaProject when RequestOptions.quotaProject is nil
+    (clientQuota: "client-quota-proj", requestQuota: nil as String?, expected: "client-quota-proj"),
+    // RequestOptions.quotaProject overrides ClientOptions.quotaProject
+    (
+      clientQuota: "client-quota-proj",
+      requestQuota: "request-quota-proj",
+      expected: "request-quota-proj"
+    ),
+  ])
+  func executeQuotaProjectPrecedence(
+    clientQuota: String?,
+    requestQuota: String?,
+    expected: String
+  ) async throws {
+    actor MetadataCollector {
+      var userProjects: [String] = []
+      func record(_ values: [String]) {
+        userProjects = values
+      }
+    }
+    let collector = MetadataCollector()
+
+    struct InspectingEchoService: RegistrableRPCService {
+      let collector: MetadataCollector
+      func registerMethods<Transport: ServerTransport>(with router: inout RPCRouter<Transport>) {
+        router.registerHandler(
+          forMethod: MethodDescriptor(
+            service: ServiceDescriptor(package: "test", service: "Echo"),
+            method: "Echo"
+          ),
+          deserializer: ProtobufDeserializer<Google_Protobuf_Empty>(),
+          serializer: ProtobufSerializer<Google_Protobuf_Empty>()
+        ) { request, _ in
+          let values = request.metadata[stringValues: _HeaderNames.userProject].map { String($0) }
+          await collector.record(values)
+          return StreamingServerResponse(metadata: [:]) { writer in
+            try await writer.write(Google_Protobuf_Empty())
+            return [:]
+          }
+        }
+      }
+    }
+
+    let server = GRPCServer(
+      transport: .http2NIOPosix(
+        address: .ipv4(host: "127.0.0.1", port: 0),
+        transportSecurity: .plaintext
+      ),
+      services: [InspectingEchoService(collector: collector)]
+    )
+
+    try await withThrowingDiscardingTaskGroup { group in
+      group.addTask {
+        try await server.serve()
+      }
+
+      let listeningAddress = try await server.listeningAddress?.ipv4
+      guard let port = listeningAddress?.port else {
+        Issue.record("Failed to get listening port")
+        server.beginGracefulShutdown()
+        return
+      }
+
+      let endpoint = "http://127.0.0.1:\(port)"
+      var clientOptions = ClientOptions()
+      clientOptions.endpoint = endpoint
+      clientOptions.credentials = try Credentials(configuration: .anonymous)
+      clientOptions.quotaProject = clientQuota
+
+      let client = try _GRPCClient(from: clientOptions, withDefaultEndpoint: endpoint)
+      defer {
+        client.close()
+        server.beginGracefulShutdown()
+      }
+
+      let requestOptions = RequestOptions().with { $0.quotaProject = requestQuota }
+      let _: Google_Protobuf_Empty = try await client.execute(
+        path: "/test.Echo/Echo",
+        request: Google_Protobuf_Empty(),
+        options: requestOptions,
+        clientHeader: ""
+      )
+      #expect(await collector.userProjects == [expected])
+    }
+  }
 }
