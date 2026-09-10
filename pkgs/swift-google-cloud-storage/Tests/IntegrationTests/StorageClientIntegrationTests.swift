@@ -506,6 +506,26 @@ struct StorageClientIntegrationTests {
 
     print("Dynamic source with last chunk empty upload successful: \(object)")
   }
+
+  // Reproduces https://github.com/googleapis/google-cloud-swift/issues/805:
+  // GCS JSON API returns HTTP error responses without a gRPC "status" string,
+  // causing GoogleCloudGax._ErrorWrapper to set ServiceError.code to .unknown
+  // instead of mapping to the expected Code (e.g. .notFound).
+  @Test func testUploadToNonExistentBucketReturnsNotFound() async throws {
+    let bucket = "non-existent-bucket-\(UUID().uuidString.lowercased())"
+    let objectName = "test-upload-\(UUID().uuidString)"
+    let data = Data("Hello Non-existent Bucket".utf8)
+    let storage = try StorageClient()
+
+    do {
+      _ = try await storage.upload(data, to: bucket, as: objectName)
+      Issue.record("Expected upload to non-existent bucket to fail, but it succeeded")
+    } catch RequestError.service(let serviceError) {
+      #expect(serviceError.code == .notFound)
+    } catch {
+      Issue.record("Expected RequestError.service, but got \(error)")
+    }
+  }
 }
 
 @Suite(.enabled(if: integrationTestsEnabled()))
