@@ -60,6 +60,12 @@ locals {
       pool_id = "swift-sdk-pool"
       shards  = 8
     }
+    docs = {
+      config  = "scripted.yaml"
+      script  = "docs"
+      pool_id = "swift-sdk-pool"
+      shards  = 8
+    }
   }
 
   # Compute the effective list of builds before shard expansion.

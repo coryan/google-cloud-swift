@@ -293,6 +293,20 @@ swift package --disable-sandbox preview-documentation --target GoogleCloudSecret
 swift package --disable-sandbox preview-documentation --target GoogleCloudComputeV1
 ```
 
+### Preview Other Generated Packages
+
+In standard local development workflows, only a minimal set of packages is
+built to keep dependency resolution and build times short-ish.
+
+To preview documentation for any package, set `SHARD_COUNT=1` and
+`SHARD_INDEX=0` in your shell. That loads all packages into the "shard", and
+you can pick the target with `--target <PackageTargetName>`:
+
+```bash
+env SHARD_COUNT=1 SHARD_INDEX=0 \
+  swift package --disable-sandbox preview-documentation --target GoogleCloudVisionV1
+```
+
 ## Miscellaneous Tools
 
 We use a number of tools to format non-Swift code. The CI builds enforce

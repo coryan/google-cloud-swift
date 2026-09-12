@@ -40,28 +40,47 @@ let generatedModules: [Target.Dependency] = generated.map {
   .product(name: $0.module, package: $0.name)
 }
 
+// `generatedPackagesFull()` includes `swift-google-type`, `swift-google-iam-v1`,
+// and `swift-google-cloud-location`. When sharding is enabled, shards containing
+// these packages add them to `generatedDependencies` as path dependencies.
+// Declaring both a remote URL and a path dependency for the same package causes
+// SwiftPM dependency resolution to fail. `baseDependencies` only appends the
+// remote URL when the package is absent from `generatedDependencies`.
+let generatedSet = Set(generated.map { $0.name })
+var baseDependencies: [Package.Dependency] = [
+  // Reference local packages via paths
+  .package(url: "https://github.com/googleapis/swift-google-auth", from: "0.0.0-preview"),
+  .package(url: "https://github.com/googleapis/swift-google-gax", from: "0.0.0-preview"),
+  .package(url: "https://github.com/googleapis/swift-google-wkt", from: "0.1.0-preview"),
+  .package(path: "./pkgs/swift-google-cloud-storage"),
+  .package(path: "./guide"),
+  .package(url: "https://github.com/apple/swift-log", from: "1.12.0"),
+  .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
+  .package(url: "https://github.com/apple/swift-nio", from: "2.101.0"),
+  // Only used for development.
+  .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
+]
+
+if !generatedSet.contains("swift-google-type") {
+  baseDependencies.append(
+    .package(url: "https://github.com/googleapis/swift-google-type", from: "0.1.0-preview"))
+}
+if !generatedSet.contains("swift-google-iam-v1") {
+  baseDependencies.append(
+    .package(url: "https://github.com/googleapis/swift-google-iam-v1", from: "0.1.0-preview"))
+}
+if !generatedSet.contains("swift-google-cloud-location") {
+  baseDependencies.append(
+    .package(
+      url: "https://github.com/googleapis/swift-google-cloud-location", from: "0.1.0-preview"))
+}
+
 let package = Package(
   name: "GoogleCloudSwift",
   platforms: [
     .macOS(.v15)
   ],
-  dependencies: [
-    // Reference local packages via paths
-    .package(url: "https://github.com/googleapis/swift-google-auth", from: "0.0.0-preview"),
-    .package(url: "https://github.com/googleapis/swift-google-gax", from: "0.0.0-preview"),
-    .package(url: "https://github.com/googleapis/swift-google-wkt", from: "0.1.0-preview"),
-    .package(url: "https://github.com/googleapis/swift-google-type", from: "0.1.0-preview"),
-    .package(url: "https://github.com/googleapis/swift-google-iam-v1", from: "0.1.0-preview"),
-    .package(
-      url: "https://github.com/googleapis/swift-google-cloud-location", from: "0.1.0-preview"),
-    .package(path: "./pkgs/swift-google-cloud-storage"),
-    .package(path: "./guide"),
-    .package(url: "https://github.com/apple/swift-log", from: "1.12.0"),
-    .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.5.0"),
-    .package(url: "https://github.com/apple/swift-nio", from: "2.101.0"),
-    // Only used for development.
-    .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
-  ] + generatedDependencies,
+  dependencies: baseDependencies + generatedDependencies,
   targets: [
     .testTarget(
       name: "AllModules",
@@ -219,9 +238,40 @@ struct Generated {
   }
 }
 
-/// Finds the generated packages used for the build.
+/// Finds the generated packages to use in this build.
+///
+/// In standard local development workflows, only a minimal set of packages
+/// is built (see `generatedPackagesStatic()`). That keeps the dependency
+/// resolution and build times short-ish.
+///
+/// To build (or generate docs) for any package set SHARD_COUNT=1 and
+/// SHARD_INDEX=0, that will load all the packages into the "shard" and then
+/// you can pick with `--target <PackageTargetName>`.
 func selectGeneratedPackages() -> [Generated] {
-  let fullBuild = ProcessInfo.processInfo.environment["GOOGLE_CLOUD_SWIFT_FULL_BUILD"] == "true"
+  let env = ProcessInfo.processInfo.environment
+  if let extra = env["GOOGLE_CLOUD_SWIFT_EXTRA_PACKAGES"] {
+    let extraSet = Set(extra.split(separator: " ").map(String.init))
+    let all = generatedPackagesFull()
+    let staticPkgs = generatedPackagesStatic()
+    let staticSet = Set(staticPkgs.map { $0.name })
+    return staticPkgs + all.filter { extraSet.contains($0.name) && !staticSet.contains($0.name) }
+  }
+  if let countStr = env["SHARD_COUNT"], let count = Int(countStr), count >= 1 {
+    let index = Int(env["SHARD_INDEX"] ?? "0") ?? 0
+    let all = generatedPackagesFull()
+    if count == 1 && index == 0 {
+      return all
+    }
+    let staticPkgs = generatedPackagesStatic()
+    let staticSet = Set(staticPkgs.map { $0.name })
+    let sharded = all.filter { !staticSet.contains($0.name) }
+      .enumerated()
+      .compactMap { (i, pkg) -> Generated? in
+        (i % count == index) ? pkg : nil
+      }
+    return staticPkgs + sharded
+  }
+  let fullBuild = env["GOOGLE_CLOUD_SWIFT_FULL_BUILD"] == "true"
   if fullBuild {
     return generatedPackagesFull()
   }
