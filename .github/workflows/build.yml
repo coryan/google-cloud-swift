@@ -52,6 +52,13 @@ jobs:
           # swift-package-edit needed.
           echo ==== wkt ====
           swift test "${flags[@]}" --package-path pkgs/swift-google-wkt
+          if [[ "${RUNNER_OS}" = "Windows" ]]; then
+            # The remaining targets won't compile on Windows because
+            # async-http-client and grpc-swift-2 depend on swift-nio-extras,
+            # which does not support Windows.
+            exit 0
+          fi
+
           echo ==== auth ====
           swift test "${flags[@]}" --package-path pkgs/swift-google-auth
 
