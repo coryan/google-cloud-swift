@@ -19,8 +19,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 
-source "${REPO_ROOT}/ci/package-dependencies.sh"
-
 errors=0
 count=0
 
@@ -46,36 +44,6 @@ fi
 export SHARD_INDEX="${shard_index}"
 export SHARD_COUNT="${shard_count}"
 
-restore_packages() {
-    swift package unedit --force swift-google-wkt >/dev/null 2>&1 || true
-    swift package unedit --force swift-google-auth >/dev/null 2>&1 || true
-    swift package unedit --force swift-google-gax >/dev/null 2>&1 || true
-    swift package unedit --force swift-google-longrunning >/dev/null 2>&1 || true
-    swift package unedit --force swift-google-iam-v1 >/dev/null 2>&1 || true
-    swift package unedit --force swift-google-cloud-location >/dev/null 2>&1 || true
-    if [[ -d "${REPO_ROOT}/.git" ]] && git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        git -C "${REPO_ROOT}" restore Package.resolved || true
-    fi
-}
-trap restore_packages EXIT INT TERM
-
-swift package edit --path "${REPO_ROOT}/pkgs/swift-google-wkt"  swift-google-wkt
-swift package edit --path "${REPO_ROOT}/pkgs/swift-google-auth" swift-google-auth
-swift package edit --path "${REPO_ROOT}/pkgs/swift-google-gax"  swift-google-gax
-swift package edit --path "${REPO_ROOT}/generated/swift-google-longrunning"  swift-google-longrunning
-swift package edit --path "${REPO_ROOT}/generated/swift-google-iam-v1"  swift-google-iam-v1
-swift package edit --path "${REPO_ROOT}/generated/swift-google-cloud-location"  swift-google-cloud-location
-
-echo "--- SWIFT VERSION ---"
-swift --version
-echo "--- FETCH DEPENDENCIES ---"
-swift package resolve || \
-  (sleep 5 ; swift package resolve) || \
-  (sleep 10; swift package resolve)
-echo "--- Initial disk space"
-df -h
-echo "--- DONE ---"
-
 clean_flags=(
     --warnings-as-errors
 )
@@ -92,10 +60,17 @@ clean_targets=(
 declare -A built_targets
 targets=()
 run_clean_targets=false
+discover_targets=false
 
+# Select the packages *before* resolving the dependencies. Loading the manifests
+# for all the packages in `generated/` is slow, PR builds only need a handful of
+# them.
 if [[ "${trigger_name}" != gcb-pm-* && "${shard_count}" -le 1 ]]; then
     echo "--- Building PR documentation subset (trigger: ${trigger_name:-none})"
     run_clean_targets=true
+    # Setting this variable, even to an empty value, selects the small set of
+    # packages used by the tests, plus any package added by this PR.
+    extra_packages=""
     if [[ -d "${REPO_ROOT}/.git" ]] && git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         git -C "${REPO_ROOT}" fetch --unshallow || true
         mapfile -t new_dirs < <(git -C "${REPO_ROOT}" diff "origin/main...HEAD" --name-only --diff-filter=A 2>/dev/null | grep '/Package.swift' | grep -v /Sources/ | xargs -I{} dirname {} 2>/dev/null || true)
@@ -108,17 +83,49 @@ if [[ "${trigger_name}" != gcb-pm-* && "${shard_count}" -le 1 ]]; then
             done
             if [[ ${#new_targets[@]} -gt 0 ]]; then
                 targets+=("${new_targets[@]}")
-                export GOOGLE_CLOUD_SWIFT_EXTRA_PACKAGES="$(printf '%s ' "${new_dirs[@]##*/}")"
+                extra_packages="$(printf '%s ' "${new_dirs[@]##*/}")"
             fi
         fi
     fi
+    export GOOGLE_CLOUD_SWIFT_EXTRA_PACKAGES="${extra_packages}"
 else
-    # Post-merge or multi-shard build.
+    # Post-merge or multi-shard build. `SHARD_INDEX` and `SHARD_COUNT` select the
+    # packages, and the targets are discovered once the dependencies resolve.
     # Shard 0 validates clean_targets with --warnings-as-errors.
     if (( shard_index == 0 )); then
         run_clean_targets=true
     fi
+    discover_targets=true
+fi
 
+restore_packages() {
+    swift package unedit --force swift-google-wkt >/dev/null 2>&1 || true
+    swift package unedit --force swift-google-auth >/dev/null 2>&1 || true
+    swift package unedit --force swift-google-gax >/dev/null 2>&1 || true
+    if [[ -d "${REPO_ROOT}/.git" ]] && git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        git -C "${REPO_ROOT}" restore Package.resolved || true
+    fi
+}
+trap restore_packages EXIT INT TERM
+
+# Only the packages in `pkgs/` are remote dependencies of the top-level package.
+# The packages in `generated/` are path dependencies, SwiftPM already uses the
+# local version, and putting them in edit mode fails.
+swift package edit --path "${REPO_ROOT}/pkgs/swift-google-wkt"  swift-google-wkt
+swift package edit --path "${REPO_ROOT}/pkgs/swift-google-auth" swift-google-auth
+swift package edit --path "${REPO_ROOT}/pkgs/swift-google-gax"  swift-google-gax
+
+echo "--- SWIFT VERSION ---"
+swift --version
+echo "--- FETCH DEPENDENCIES ---"
+swift package resolve || \
+  (sleep 5 ; swift package resolve) || \
+  (sleep 10; swift package resolve)
+echo "--- Initial disk space"
+df -h
+echo "--- DONE ---"
+
+if [[ "${discover_targets}" == true ]]; then
     if ! command -v jq >/dev/null 2>&1; then
         echo "--- Installing jq ---"
         export DEBIAN_FRONTEND=noninteractive

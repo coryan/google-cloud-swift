@@ -40,20 +40,14 @@ let generatedModules: [Target.Dependency] = generated.map {
   .product(name: $0.module, package: $0.name)
 }
 
-// `generatedPackagesFull()` includes `swift-google-type`, `swift-google-iam-v1`,
-// and `swift-google-cloud-location`. When sharding is enabled, shards containing
-// these packages add them to `generatedDependencies` as path dependencies.
-// Declaring both a remote URL and a path dependency for the same package causes
-// SwiftPM dependency resolution to fail. `baseDependencies` only appends the
-// remote URL when the package is absent from `generatedDependencies`.
-let generatedSet = Set(generated.map { $0.name })
-var baseDependencies: [Package.Dependency] = [
+// The "mixin" packages, e.g. `swift-google-iam-v1`, are in `generated/`, and
+// `generatedPackagesStatic()` always includes them as path dependencies.
+// Declaring both a remote URL and a path dependency for the same package makes
+// SwiftPM dependency resolution fail, so this list must not reference them.
+let baseDependencies: [Package.Dependency] = [
   .package(url: "https://github.com/googleapis/swift-google-auth", from: "0.0.0-preview"),
   .package(url: "https://github.com/googleapis/swift-google-gax", from: "0.0.0-preview"),
   .package(url: "https://github.com/googleapis/swift-google-wkt", from: "0.1.0-preview"),
-  .package(url: "https://github.com/googleapis/swift-google-type", from: "0.1.0-preview"),
-  .package(url: "https://github.com/googleapis/swift-google-iam-v1", from: "0.1.0-preview"),
-  .package(url: "https://github.com/googleapis/swift-google-cloud-location", from: "0.1.0-preview"),
   // Reference local packages via paths
   .package(path: "./pkgs/swift-google-cloud-storage"),
   .package(path: "./guide"),
@@ -267,18 +261,26 @@ func selectGeneratedPackages() -> [Generated] {
   return generatedPackagesStatic()
 }
 
-/// The packages required to build `Tests/`.
+/// The packages always included in the build.
 ///
 /// The tests, particularly the integration tests, use a relatively small set of packages. To find
 /// out how we picked which APIs and packages to use in the integration tests, see the README files
 /// for each test.
+///
+/// The list also includes the "mixin" packages. Most generated packages depend on them, and
+/// declaring both a remote URL and a path dependency for the same package makes SwiftPM dependency
+/// resolution fail. Including them here guarantees they always appear as path dependencies.
 func generatedPackagesStatic() -> [Generated] {
   return [
+    .init(name: "swift-google-cloud-location", module: "GoogleCloudLocation"),
     .init(name: "swift-google-cloud-secretmanager-v1", module: "GoogleCloudSecretManagerV1"),
     .init(name: "swift-google-cloud-security-publicca-v1", module: "GoogleCloudSecurityPublicCAV1"),
     .init(name: "swift-google-cloud-workflows-v1", module: "GoogleCloudWorkflowsV1"),
     .init(name: "swift-google-devtools-cloudbuild-v1", module: "GoogleCloudBuildV1"),
     .init(name: "swift-google-iam-credentials-v1", module: "GoogleIAMCredentialsV1"),
+    .init(name: "swift-google-iam-v1", module: "GoogleIAMV1"),
+    .init(name: "swift-google-longrunning", module: "GoogleLongRunning"),
+    .init(name: "swift-google-type", module: "GoogleType"),
     .init(
       name: "swift-google-cloud-compute-v1", module: "GoogleCloudComputeV1",
       traits: ["Instances", "Images", "ZoneOperations"]),
