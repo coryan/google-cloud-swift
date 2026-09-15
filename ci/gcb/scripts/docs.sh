@@ -50,8 +50,8 @@ restore_packages() {
     swift package unedit --force swift-google-wkt >/dev/null 2>&1 || true
     swift package unedit --force swift-google-auth >/dev/null 2>&1 || true
     swift package unedit --force swift-google-gax >/dev/null 2>&1 || true
-    swift package unedit --force swift-google-iam-v1 >/dev/null 2>&1 || true
     swift package unedit --force swift-google-longrunning >/dev/null 2>&1 || true
+    swift package unedit --force swift-google-iam-v1 >/dev/null 2>&1 || true
     swift package unedit --force swift-google-cloud-location >/dev/null 2>&1 || true
     if [[ -d "${REPO_ROOT}/.git" ]] && git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         git -C "${REPO_ROOT}" restore Package.resolved || true
@@ -62,8 +62,8 @@ trap restore_packages EXIT INT TERM
 swift package edit --path "${REPO_ROOT}/pkgs/swift-google-wkt"  swift-google-wkt
 swift package edit --path "${REPO_ROOT}/pkgs/swift-google-auth" swift-google-auth
 swift package edit --path "${REPO_ROOT}/pkgs/swift-google-gax"  swift-google-gax
-swift package edit --path "${REPO_ROOT}/generated/swift-google-iam-v1"  swift-google-iam-v1
 swift package edit --path "${REPO_ROOT}/generated/swift-google-longrunning"  swift-google-longrunning
+swift package edit --path "${REPO_ROOT}/generated/swift-google-iam-v1"  swift-google-iam-v1
 swift package edit --path "${REPO_ROOT}/generated/swift-google-cloud-location"  swift-google-cloud-location
 
 echo "--- SWIFT VERSION ---"

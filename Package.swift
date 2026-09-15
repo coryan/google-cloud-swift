@@ -48,10 +48,13 @@ let generatedModules: [Target.Dependency] = generated.map {
 // remote URL when the package is absent from `generatedDependencies`.
 let generatedSet = Set(generated.map { $0.name })
 var baseDependencies: [Package.Dependency] = [
-  // Reference local packages via paths
   .package(url: "https://github.com/googleapis/swift-google-auth", from: "0.0.0-preview"),
   .package(url: "https://github.com/googleapis/swift-google-gax", from: "0.0.0-preview"),
   .package(url: "https://github.com/googleapis/swift-google-wkt", from: "0.1.0-preview"),
+  .package(url: "https://github.com/googleapis/swift-google-type", from: "0.1.0-preview"),
+  .package(url: "https://github.com/googleapis/swift-google-iam-v1", from: "0.1.0-preview"),
+  .package(url: "https://github.com/googleapis/swift-google-cloud-location", from: "0.1.0-preview"),
+  // Reference local packages via paths
   .package(path: "./pkgs/swift-google-cloud-storage"),
   .package(path: "./guide"),
   .package(url: "https://github.com/apple/swift-log", from: "1.12.0"),
@@ -60,20 +63,6 @@ var baseDependencies: [Package.Dependency] = [
   // Only used for development.
   .package(url: "https://github.com/apple/swift-docc-plugin", from: "1.0.0"),
 ]
-
-if !generatedSet.contains("swift-google-type") {
-  baseDependencies.append(
-    .package(url: "https://github.com/googleapis/swift-google-type", from: "0.1.0-preview"))
-}
-if !generatedSet.contains("swift-google-iam-v1") {
-  baseDependencies.append(
-    .package(url: "https://github.com/googleapis/swift-google-iam-v1", from: "0.1.0-preview"))
-}
-if !generatedSet.contains("swift-google-cloud-location") {
-  baseDependencies.append(
-    .package(
-      url: "https://github.com/googleapis/swift-google-cloud-location", from: "0.1.0-preview"))
-}
 
 let package = Package(
   name: "GoogleCloudSwift",
