@@ -48,25 +48,11 @@ export GOOGLE_WORKLOAD_IDENTITY_OIDC_AUDIENCE="//iam.googleapis.com/projects/109
 
 # Install Go if not present
 if ! command -v go >/dev/null 2>&1; then
-    echo "--- Installing Go ---"
-    ARCH="$(uname -m)"
-    case "${ARCH}" in
-        x86_64) GOARCH="amd64" ;;
-        aarch64|arm64) GOARCH="arm64" ;;
-        *) echo "Unsupported architecture for Go: ${ARCH}"; exit 1 ;;
-    esac
-    GO_VERSION="1.25.1"
-    INSTALL_DIR="/usr/local"
-    if [[ ! -w "${INSTALL_DIR}" ]]; then
-        INSTALL_DIR="${HOME}/.local"
-        mkdir -p "${INSTALL_DIR}"
-    fi
-    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" | tar -C "${INSTALL_DIR}" -xz
-    export PATH="${INSTALL_DIR}/go/bin:${PATH}"
+    source "${SCRIPT_DIR}/install-go.sh"
 fi
 
 export GOPATH="${HOME}/go"
-export PATH="${GOPATH}/bin:/usr/local/go/bin:${PATH}"
+export PATH="${GOPATH}/bin:${PATH}"
 
 if ! command -v gapic-showcase >/dev/null 2>&1; then
     echo "--- Installing gapic-showcase ---"
