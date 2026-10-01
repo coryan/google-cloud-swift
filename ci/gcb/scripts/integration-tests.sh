@@ -54,12 +54,13 @@ fi
 export GOPATH="${HOME}/go"
 export PATH="${GOPATH}/bin:${PATH}"
 
+SHOWCASE_VERSION="v0.43.1-0.20260817230810-0c88ce83d259"
 SHOWCASE_BIN="${GOPATH}/bin/gapic-showcase"
 if [[ ! -x "${SHOWCASE_BIN}" ]]; then
     echo "--- Installing gapic-showcase ---"
     installed=false
     for delay in 5 10 20; do
-        if go install github.com/googleapis/gapic-showcase/cmd/gapic-showcase@v0.43.1-0.20260817230810-0c88ce83d259; then
+        if go install "github.com/googleapis/gapic-showcase/cmd/gapic-showcase@${SHOWCASE_VERSION}"; then
             installed=true
             break
         fi
@@ -67,7 +68,7 @@ if [[ ! -x "${SHOWCASE_BIN}" ]]; then
         sleep "${delay}"
     done
     if [[ "${installed}" != true ]]; then
-        go install github.com/googleapis/gapic-showcase/cmd/gapic-showcase@v0.43.1-0.20260817230810-0c88ce83d259
+        go install "github.com/googleapis/gapic-showcase/cmd/gapic-showcase@${SHOWCASE_VERSION}"
     fi
 fi
 
