@@ -21,7 +21,13 @@ import NIOCore
 import NIOSSL
 import Testing
 
-@Suite(.serialized) struct PQCTests {
+@Suite(
+  .serialized,
+  .enabled(
+    if: ProcessInfo.processInfo.environment["GOOGLE_CLOUD_SWIFT_SHOWCASE_PATH"] != nil,
+    "Showcase tests require GOOGLE_CLOUD_SWIFT_SHOWCASE_PATH"
+  )
+) struct PQCTests {
   @Test func pqcUnaryRPC() async throws {
     let server = try await ShowcaseServer.start(tlsGroups: "0x11ec")
     defer { server.stop() }

@@ -54,10 +54,24 @@ fi
 export GOPATH="${HOME}/go"
 export PATH="${GOPATH}/bin:${PATH}"
 
-if ! command -v gapic-showcase >/dev/null 2>&1; then
+SHOWCASE_BIN="${GOPATH}/bin/gapic-showcase"
+if [[ ! -x "${SHOWCASE_BIN}" ]]; then
     echo "--- Installing gapic-showcase ---"
-    go install github.com/googleapis/gapic-showcase/cmd/gapic-showcase@v0.43.1-0.20260817230810-0c88ce83d259
+    installed=false
+    for delay in 5 10 20; do
+        if go install github.com/googleapis/gapic-showcase/cmd/gapic-showcase@v0.43.1-0.20260817230810-0c88ce83d259; then
+            installed=true
+            break
+        fi
+        echo "go install failed, retrying in ${delay}s..."
+        sleep "${delay}"
+    done
+    if [[ "${installed}" != true ]]; then
+        go install github.com/googleapis/gapic-showcase/cmd/gapic-showcase@v0.43.1-0.20260817230810-0c88ce83d259
+    fi
 fi
+
+export GOOGLE_CLOUD_SWIFT_SHOWCASE_PATH="${SHOWCASE_BIN}"
 
 errors=0
 count=1

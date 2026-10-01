@@ -19,16 +19,13 @@ import GoogleShowcaseV1Beta1
 
 enum ShowcaseServerError: Error, CustomStringConvertible {
   case binaryNotFound
-  case installationFailed(Int32)
   case caCertTimeout
   case readinessTimeout(String)
 
   var description: String {
     switch self {
     case .binaryNotFound:
-      return "gapic-showcase binary could not be found or installed"
-    case .installationFailed(let code):
-      return "go install gapic-showcase failed with exit code \(code)"
+      return "gapic-showcase binary not found at GOOGLE_CLOUD_SWIFT_SHOWCASE_PATH"
     case .caCertTimeout:
       return "Timed out waiting for gapic-showcase to write CA certificate"
     case .readinessTimeout(let endpoint):
@@ -74,7 +71,7 @@ public final class ShowcaseServer: Sendable {
     fallbackPort: Int = 1339,
     tlsGroups: String? = "0x11ec"
   ) async throws -> ShowcaseServer {
-    let binary = try findOrInstallBinary()
+    let binary = try findBinary()
     let tempCAFile = FileManager.default.temporaryDirectory
       .appendingPathComponent(
         "showcase_ca_\(ProcessInfo.processInfo.processIdentifier)_\(UUID().uuidString).pem")
@@ -174,47 +171,12 @@ public final class ShowcaseServer: Sendable {
       "\(self.endpoint), last error: \(lastError.map { "\($0)" } ?? "none")")
   }
 
-  private static func findOrInstallBinary() throws -> String {
-    let env = ProcessInfo.processInfo.environment
-    if let path = env["GAPIC_SHOWCASE_PATH"], FileManager.default.isExecutableFile(atPath: path) {
-      return path
+  private static func findBinary() throws -> String {
+    guard let path = ProcessInfo.processInfo.environment["GOOGLE_CLOUD_SWIFT_SHOWCASE_PATH"],
+      FileManager.default.isExecutableFile(atPath: path)
+    else {
+      throw ShowcaseServerError.binaryNotFound
     }
-
-    // Check GOPATH
-    let gopath = env["GOPATH"] ?? "\(env["HOME"] ?? "")/go"
-    let gopathBin = "\(gopath)/bin/gapic-showcase"
-    if FileManager.default.isExecutableFile(atPath: gopathBin) {
-      return gopathBin
-    }
-
-    // Check PATH
-    if let pathDirs = env["PATH"] {
-      for dir in pathDirs.split(separator: ":") {
-        let candidate = "\(dir)/gapic-showcase"
-        if FileManager.default.isExecutableFile(atPath: candidate) {
-          return candidate
-        }
-      }
-    }
-
-    // Attempt go install
-    let installProcess = Process()
-    installProcess.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-    installProcess.arguments = [
-      "go",
-      "install",
-      "github.com/googleapis/gapic-showcase/cmd/gapic-showcase@v0.43.1-0.20260817230810-0c88ce83d259",
-    ]
-    try installProcess.run()
-    installProcess.waitUntilExit()
-    guard installProcess.terminationStatus == 0 else {
-      throw ShowcaseServerError.installationFailed(installProcess.terminationStatus)
-    }
-
-    if FileManager.default.isExecutableFile(atPath: gopathBin) {
-      return gopathBin
-    }
-
-    throw ShowcaseServerError.binaryNotFound
+    return path
   }
 }
