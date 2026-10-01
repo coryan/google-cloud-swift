@@ -39,7 +39,7 @@ import struct AsyncHTTPClient.HTTPClientResponse
       endpoint: from.endpoint,
       defaultEndpoint: withDefaultEndpoint
     )
-    self.inner = HTTPClientHolder()
+    self.inner = try HTTPClientHolder(rootCertificates: from.rootCertificates)
   }
 
   // Creates a new testing client.
