@@ -46,6 +46,33 @@ export EXTERNAL_ACCOUNT_SERVICE_ACCOUNT_EMAIL="testsa@${EXTERNAL_ACCOUNT_PROJECT
 #   - PROVIDER_ID: google-idp
 export GOOGLE_WORKLOAD_IDENTITY_OIDC_AUDIENCE="//iam.googleapis.com/projects/1092239828259/locations/global/workloadIdentityPools/google-idp/providers/google-idp"
 
+# Install Go if not present
+if ! command -v go >/dev/null 2>&1; then
+    echo "--- Installing Go ---"
+    ARCH="$(uname -m)"
+    case "${ARCH}" in
+        x86_64) GOARCH="amd64" ;;
+        aarch64|arm64) GOARCH="arm64" ;;
+        *) echo "Unsupported architecture for Go: ${ARCH}"; exit 1 ;;
+    esac
+    GO_VERSION="1.25.1"
+    INSTALL_DIR="/usr/local"
+    if [[ ! -w "${INSTALL_DIR}" ]]; then
+        INSTALL_DIR="${HOME}/.local"
+        mkdir -p "${INSTALL_DIR}"
+    fi
+    curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH}.tar.gz" | tar -C "${INSTALL_DIR}" -xz
+    export PATH="${INSTALL_DIR}/go/bin:${PATH}"
+fi
+
+export GOPATH="${HOME}/go"
+export PATH="${GOPATH}/bin:/usr/local/go/bin:${PATH}"
+
+if ! command -v gapic-showcase >/dev/null 2>&1; then
+    echo "--- Installing gapic-showcase ---"
+    go install github.com/googleapis/gapic-showcase/cmd/gapic-showcase@v0.43.1-0.20260817230810-0c88ce83d259
+fi
+
 errors=0
 count=1
 echo "--- Running top-level integration tests ---"
